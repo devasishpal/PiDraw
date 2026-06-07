@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Generator
@@ -365,4 +366,6 @@ class TestHelp:
     def test_watch_help(self) -> None:
         result = runner.invoke(app, ["watch", "--help"])
         assert result.exit_code == 0
-        assert "--debounce" in result.stdout
+        ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
+        plain = ansi_escape.sub("", result.stdout)
+        assert "--debounce" in plain
