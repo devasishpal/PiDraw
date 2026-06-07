@@ -1,0 +1,10 @@
+- Diagrams as code, rendered with precision
+- Your diagrams. Universal. Scalable. Beautiful.
+- From text to SVG in one call
+- Universal diagram rendering for the Python ecosystem
+- One API to render them all
+- Text in, SVG out. Everything in between is automatic.
+- Speak any diagram language, output pure SVG
+- Diagram intelligence for your Python pipeline
+- Bring your diagrams to life with PiDraw
+- The universal bridge between diagram languages and SVG
