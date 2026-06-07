@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pidraw.core.models import Point, Position, Shape, ShapeType, Size
+from pidraw.core.models import Position, ShapeType, Size
 
 
 def compute_shape_path(

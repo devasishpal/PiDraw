@@ -5,7 +5,6 @@ from pidraw.core.models import (
     ArrowStyle,
     Diagram,
     Edge,
-    EdgeStyle,
     Label,
     Layout,
     LayoutType,

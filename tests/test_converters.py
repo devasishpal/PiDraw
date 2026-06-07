@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from pidraw.core.converters import convert, get_converter, list_converters
-from pidraw.core.converters.graphviz import GraphvizConverter
-from pidraw.core.converters.mermaid import MermaidConverter
 
 
 class TestConverters:

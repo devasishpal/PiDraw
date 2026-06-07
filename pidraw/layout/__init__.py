@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from pidraw.core.models import Diagram, Layout, LayoutType
 from pidraw.layout.base import LayoutEngine, layout_registry
 from pidraw.layout.flow import FlowLayout
 from pidraw.layout.grid import GridLayout
 from pidraw.layout.layered import LayeredLayout
 from pidraw.layout.tree import TreeLayout
-from pidraw.core.models import Diagram, Layout, LayoutType
 
 
 def apply_layout(diagram: Diagram) -> Diagram:
@@ -32,6 +32,7 @@ __all__ = [
     "GridLayout",
     "LayeredLayout",
     "TreeLayout",
+    "Layout",
     "apply_layout",
     "get_layout_engine",
 ]

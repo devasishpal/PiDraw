@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pidraw.core.models import Diagram, LayoutType, Node, Position, Viewport
+from pidraw.core.models import Diagram, LayoutType, Position, Viewport
 from pidraw.layout.base import LayoutEngine, register_layout
 
 

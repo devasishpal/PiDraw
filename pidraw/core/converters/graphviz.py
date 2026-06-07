@@ -4,20 +4,17 @@ import re
 
 from pidraw.core.converters.base import DiagramConverter, register_converter
 from pidraw.core.models import (
-    ArrowStyle,
     Diagram,
     Edge,
     Label,
     Layout,
     LayoutType,
     Node,
-    Position,
     Shape,
     ShapeType,
     Size,
     Style,
 )
-
 
 _NODE_STMT = re.compile(
     r'(\w[\w\d_]*|"[^"]*")\s*'
@@ -123,7 +120,6 @@ class GraphvizConverter(DiagramConverter):
                 fillcolor = attrs.get("fillcolor", "")
                 color = attrs.get("color", "")
                 fontcolor = attrs.get("fontcolor", "")
-                node_style = attrs.get("style", "")
 
                 if nid not in diagram.nodes:
                     tw = max(len(label_text) * 8, 60)

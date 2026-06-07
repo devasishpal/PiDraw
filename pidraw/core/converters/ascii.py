@@ -4,7 +4,6 @@ import re
 
 from pidraw.core.converters.base import DiagramConverter, register_converter
 from pidraw.core.models import (
-    ArrowStyle,
     Diagram,
     Edge,
     Label,
@@ -33,7 +32,6 @@ class ASCIIConverter(DiagramConverter):
         diagram.layout = Layout(layout_type=LayoutType.FLOW, direction="TB", node_spacing=40, layer_spacing=50)
 
         lines = source.strip().split("\n")
-        boxes: list[dict] = []
         connections: list[tuple[int, int]] = []
         node_counter = 0
 
@@ -79,7 +77,7 @@ class ASCIIConverter(DiagramConverter):
                                 # Find which box this connects to
                                 for existing in diagram.all_nodes():
                                     if existing.id != nid and existing.position:
-                                        ex, ey = existing.position.x / 10, existing.position.y / 20
+                                        ex, _ = existing.position.x / 10, existing.position.y / 20
                                         if abs(conn_end * 10 - ex) < 30 or abs(conn_start * 10 - ex) < 30:
                                             connections.append((nid, existing.id))
 

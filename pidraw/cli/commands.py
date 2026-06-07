@@ -14,11 +14,11 @@ from typing import List, Optional, Sequence
 import pidraw.engines  # noqa: F401
 from pidraw import __version__
 from pidraw.cli.logging import get_logger
+from pidraw.cli.setup import setup_all
 from pidraw.detector import detect_language
 from pidraw.diagnostics import analyze
 from pidraw.exceptions import PiDrawError
 from pidraw.formats import format_table, status_table
-from pidraw.cli.setup import setup_all
 from pidraw.optimizer import optimize_svg
 from pidraw.registry import discover_plugins, get_renderer, list_renderers
 

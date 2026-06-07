@@ -56,6 +56,7 @@ class MarkmapRenderer(BaseRenderer):
             with open(input_path, "w", encoding="utf-8") as f:
                 f.write(source)
 
+            assert self._node is not None
             result = subprocess.run(
                 [self._node, self._script, input_path, output_path],
                 capture_output=True,

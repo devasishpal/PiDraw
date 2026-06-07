@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from pidraw.backend.svg import SvgBackend
-from pidraw.core.converters import convert, get_converter
+from pidraw.core.converters import get_converter
 from pidraw.core.models import Diagram
 from pidraw.layout import apply_layout
-from pidraw.themes import apply_theme, get_theme
+from pidraw.themes import get_theme
 
 
 class ExportPipeline:

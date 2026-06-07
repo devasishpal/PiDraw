@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import math
-import re
 from typing import Optional
 from xml.etree.ElementTree import Element, SubElement, tostring
 
@@ -15,7 +13,6 @@ from pidraw.core.models import (
     Node,
     ShapeType,
     Style,
-    TextAlign,
 )
 from pidraw.core.shapes import compute_shape_path
 
@@ -47,7 +44,7 @@ class SvgBackend:
         defs = SubElement(root, "defs")
         self._add_markers(defs, diagram)
 
-        bg = SubElement(root, "rect", {
+        _ = SubElement(root, "rect", {
             "width": "100%",
             "height": "100%",
             "fill": self._theme.get("background", "#ffffff"),

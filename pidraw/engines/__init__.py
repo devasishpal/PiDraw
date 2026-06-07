@@ -1,5 +1,6 @@
 """Built-in renderer engines — all registered on import."""
 
+from pidraw.core.converters import get_converter
 from pidraw.engines.base import BaseRenderer
 from pidraw.engines.bpmn import BPMNRenderer
 from pidraw.engines.d2 import D2Renderer
@@ -8,6 +9,7 @@ from pidraw.engines.graphviz import GraphvizRenderer
 from pidraw.engines.kroki import KrokiRenderer
 from pidraw.engines.markmap import MarkmapRenderer
 from pidraw.engines.mermaid import MermaidRenderer
+from pidraw.engines.native import NativeRenderer
 from pidraw.engines.nomnoml import NomnomlRenderer
 from pidraw.engines.plantuml import PlantUMLRenderer
 from pidraw.engines.structurizr import StructurizrRenderer
@@ -15,9 +17,7 @@ from pidraw.engines.tikz import TikzRenderer
 from pidraw.engines.vega import VegaRenderer
 from pidraw.engines.vega_lite import VegaLiteRenderer
 from pidraw.engines.wavedrom import WaveDromRenderer
-from pidraw.core.converters import get_converter
-from pidraw.engines.native import NativeRenderer
-from pidraw.exceptions import RenderingError, RendererNotFoundError
+from pidraw.exceptions import RendererNotFoundError, RenderingError
 from pidraw.registry import get_renderer, register_renderer
 
 _REGISTRATIONS: list[tuple[str, type[BaseRenderer], tuple[object, ...]]] = [

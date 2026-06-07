@@ -54,8 +54,8 @@ class StructurizrRenderer(BaseRenderer):
             dsl_path = os.path.join(tmp_dir, "workspace.dsl")
             puml_dir = os.path.join(tmp_dir, "puml")
 
-            with open(dsl_path, "w", encoding="utf-8") as f:
-                f.write(source)
+            with open(dsl_path, "w", encoding="utf-8") as fh:
+                fh.write(source)
 
             assert self._resolved is not None
             result = subprocess.run(

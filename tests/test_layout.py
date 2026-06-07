@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pidraw.core.models import Diagram, Edge, Label, Layout, LayoutType, Node, Position, Size
+from pidraw.core.models import Diagram, Edge, Label, Layout, LayoutType, Node, Size
 from pidraw.layout import apply_layout
 from pidraw.layout.flow import FlowLayout
 from pidraw.layout.grid import GridLayout

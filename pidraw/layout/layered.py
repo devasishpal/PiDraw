@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
-
 from pidraw.core.models import Diagram, LayoutType, Position, Viewport
 from pidraw.layout.base import LayoutEngine, register_layout
 
@@ -55,7 +53,6 @@ class LayeredLayout(LayoutEngine):
                 n.position = Position(padding, padding)
 
         if diagram.viewport is None:
-            is_h = direction in ("LR", "RL")
             max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=800)
             max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=600)
             diagram.viewport = Viewport(width=max_x + padding, height=max_y + padding)
@@ -68,7 +65,6 @@ class LayeredLayout(LayoutEngine):
             return []
 
         edges = diagram.edges
-        in_degree: dict[str, int] = {n.id: 0 for n in nodes}
         outgoing: dict[str, list[str]] = {n.id: [] for n in nodes}
         incoming: dict[str, list[str]] = {n.id: [] for n in nodes}
 

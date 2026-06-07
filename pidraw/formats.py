@@ -189,7 +189,7 @@ def status_table() -> str:
     All data is resolved live (actual engine class, actual CLI found).
     """
     from pidraw.core.converters import get_converter
-    from pidraw.engines import _BrokenRenderer, NativeRenderer
+    from pidraw.engines import NativeRenderer, _BrokenRenderer
     from pidraw.exceptions import RendererNotFoundError
     from pidraw.registry import get_renderer
 

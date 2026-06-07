@@ -11,7 +11,6 @@ from pidraw.core.models import (
     Layout,
     LayoutType,
     Node,
-    Position,
     Shape,
     ShapeType,
     Size,

@@ -4,14 +4,12 @@ import re
 
 from pidraw.core.converters.base import DiagramConverter, register_converter
 from pidraw.core.models import (
-    ArrowStyle,
     Diagram,
     Edge,
     Label,
     Layout,
     LayoutType,
     Node,
-    Position,
     Shape,
     ShapeType,
     Size,
@@ -44,8 +42,6 @@ class PlantUMLConverter(DiagramConverter):
         diagram.layout = Layout(layout_type=LayoutType.LAYERED, direction="LR", node_spacing=50, layer_spacing=80)
 
         lines = source.strip().split("\n")
-        in_skin = False
-
         for line in lines:
             line = line.strip()
             if not line or line.startswith("'") or line == "@startuml" or line == "@enduml" or line.startswith("skinparam"):
@@ -58,7 +54,6 @@ class PlantUMLConverter(DiagramConverter):
             arrow_match = _ARROW_PATTERN.match(line)
             if arrow_match:
                 src_id = arrow_match.group(1)
-                raw_arrow = arrow_match.group(2)
                 label_text = arrow_match.group(3)
                 tgt_id = arrow_match.group(4)
 
@@ -74,20 +69,6 @@ class PlantUMLConverter(DiagramConverter):
 
                 if tgt_id:
                     edge_label = Label(text=label_text) if label_text else None
-                    arrow_end = ArrowStyle.TRIANGLE_FILLED
-                    if ">>" in raw_arrow:
-                        arrow_end = ArrowStyle.DIAMOND_FILLED
-                    elif ")" in raw_arrow:
-                        arrow_end = ArrowStyle.CIRCLE_FILLED
-                    elif "[" in raw_arrow:
-                        arrow_end = ArrowStyle.BOX
-                    elif "o" in raw_arrow:
-                        arrow_end = ArrowStyle.CIRCLE
-
-                    arrow_start = ArrowStyle.NONE
-                    if raw_arrow.startswith("<"):
-                        arrow_start = arrow_end
-
                     edge = Edge(
                         id=f"{src_id}->{tgt_id}",
                         source=src_id,

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pidraw.core.converters.base import DiagramConverter, converter_registry
 from pidraw.core.converters.ascii import ASCIIConverter
+from pidraw.core.converters.base import DiagramConverter, converter_registry
 from pidraw.core.converters.d2 import D2Converter
 from pidraw.core.converters.graphviz import GraphvizConverter
 from pidraw.core.converters.mermaid import MermaidConverter

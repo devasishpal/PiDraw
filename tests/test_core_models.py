@@ -8,7 +8,6 @@ from pidraw.core.models import (
     FontWeight,
     Group,
     Label,
-    Layout,
     LayoutType,
     Node,
     Position,
@@ -17,7 +16,6 @@ from pidraw.core.models import (
     Size,
     Style,
     TextAlign,
-    Viewport,
 )
 
 
