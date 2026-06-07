@@ -96,6 +96,7 @@ ignore = ["E501", "E741"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
 "pidraw/__init__.py" = ["E402"]
+"pidraw/backend/png.py" = ["I001"]
 
 [tool.mypy]
 python_version = "3.10"

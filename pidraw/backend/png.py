@@ -76,7 +76,7 @@ def _render_playwright(
     output_width: Optional[int] = None,
     output_height: Optional[int] = None,
 ) -> bytes:
-    from playwright.sync_api import sync_playwright  # type: ignore[import-not-found, import-untyped]  # noqa: I001
+    from playwright.sync_api import sync_playwright  # type: ignore[import-not-found, import-untyped]
 
     has_bg = background_color is not None
     bg_css = f"background: {background_color};" if has_bg else ""
