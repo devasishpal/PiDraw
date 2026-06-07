@@ -47,15 +47,8 @@ class ExportPipeline:
 
         return svg
 
-    def _resolve_background(self) -> str:
-        bg_map = {
-            "light": "#ffffff",
-            "dark": "#1e1e1e",
-            "minimal": "#fafafa",
-            "professional": "#ffffff",
-            "blueprint": "#f0f4ff",
-        }
-        return bg_map.get(self._theme_name, "#ffffff")
+    def _resolve_background(self) -> str | None:
+        return None
 
 
 def render_native(

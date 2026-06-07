@@ -46,6 +46,7 @@ DIAGRAM_EXTENSIONS: set[str] = {
     ".json",
     ".yaml",
     ".yml",
+    ".md",
 }
 
 
@@ -67,10 +68,13 @@ def _read_source(file: str | Path) -> str:
     return text.lstrip("\ufeff")
 
 
-def _write_svg(output_path: str | Path, svg: str) -> None:
+def _write_output(output_path: str | Path, data: str | bytes) -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(svg, encoding="utf-8")
+    if isinstance(data, bytes):
+        path.write_bytes(data)
+    else:
+        path.write_text(data, encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -112,44 +116,54 @@ def render_cmd(
     file: str,
     output: Optional[str] = None,
     language: Optional[str] = None,
+    format: str = "svg",
     optimize: bool = False,
     verbose: bool = False,
     quiet: bool = False,
     debug: bool = False,
 ) -> None:
-    """Render a diagram file to SVG."""
+    """Render a diagram file to SVG or PNG."""
     from pidraw.renderer import render
+
+    fmt = format.lower()
+    if fmt not in ("svg", "png"):
+        logger.error("Unsupported format: %s (use 'svg' or 'png')", format)
+        raise SystemExit(1)
 
     source = _read_source(file)
     start = time.perf_counter()
 
     try:
-        svg = render(source, language=language)
+        result = render(source, language=language, format=fmt)
     except PiDrawError as exc:
         logger.error("Render failed: %s", exc)
         raise SystemExit(1) from exc
 
     elapsed = (time.perf_counter() - start) * 1000
 
-    if optimize:
+    if fmt == "svg" and optimize and isinstance(result, str):
         try:
-            result = optimize_svg(svg)
-            svg = result.svg
+            opt = optimize_svg(result)
+            result = opt.svg
             if verbose or debug:
                 logger.info(
-                    "Optimised: %d → %d bytes (%.1f%%)",
-                    result.original_size,
-                    result.optimized_size,
-                    result.reduction_percent,
+                    "Optimised: %d \u2192 %d bytes (%.1f%%)",
+                    opt.original_size,
+                    opt.optimized_size,
+                    opt.reduction_percent,
                 )
         except Exception as exc:
             logger.warning("Optimisation skipped: %s", exc)
 
     if output:
-        _write_svg(output, svg)
+        _write_output(output, result)
         logger.info("Wrote %s", output)
+    elif fmt == "png":
+        out_path = Path(file).with_suffix(".png")
+        _write_output(str(out_path), result)
+        logger.info("Wrote %s", out_path)
     else:
-        sys.stdout.write(svg)
+        sys.stdout.write(result)  # type: ignore[arg-type]
         sys.stdout.write("\n")
 
     if verbose or debug:
@@ -253,7 +267,7 @@ def optimize_cmd(
         raise SystemExit(1) from exc
 
     if output:
-        _write_svg(output, result_obj.svg)
+        _write_output(output, result_obj.svg)
         logger.info(
             "Optimised %s (%d → %d bytes, %.1f%%)",
             output,
@@ -307,18 +321,18 @@ def _process_single(args: tuple[str, str | None, bool, str | None]) -> BatchResu
                 message="Unknown diagram language",
             )
 
-        svg = render(source, language=use_lang)
-        orig_size = len(svg.encode("utf-8"))
+        result = render(source, language=use_lang)
+        orig_size = len(result.encode("utf-8") if isinstance(result, str) else result)
 
-        if do_optimize:
-            opt = optimize_svg(svg)
-            svg = opt.svg
+        if do_optimize and isinstance(result, str):
+            opt = optimize_svg(result)
+            result = opt.svg
             orig_size = opt.original_size
             opt_size = opt.optimized_size
 
         if output_dir:
             out_path = output_dir / f"{basename}.svg"
-            _write_svg(out_path, svg)
+            _write_output(out_path, result)
 
         elapsed = (time.perf_counter() - start) * 1000
         return BatchResult(
@@ -551,21 +565,21 @@ def _watch_handle_change(
     logger.info("Change detected: %s", file)
     try:
         source = _read_source(file)
-        svg = render(source, language=language)
-        if optimize:
+        result = render(source, language=language)
+        if optimize and isinstance(result, str):
             try:
-                opt = optimize_svg(svg)
-                svg = opt.svg
+                opt = optimize_svg(result)
+                result = opt.svg
             except Exception:
                 pass
 
         if output_dir:
             out_path = Path(output_dir) / f"{path.stem}.svg"
-            _write_svg(str(out_path), svg)
+            _write_output(str(out_path), result)
             logger.info("  Wrote %s", out_path)
         else:
             out_path = path.with_suffix(".svg")
-            _write_svg(str(out_path), svg)
+            _write_output(str(out_path), result)
             logger.info("  Wrote %s", out_path)
     except PiDrawError as exc:
         logger.error("  Failed: %s", exc)
@@ -661,6 +675,45 @@ def setup_cmd(
     lines.append("-" * 40)
     sys.stdout.write("\n".join(lines))
     sys.stdout.write("\n")
+
+
+# ---------------------------------------------------------------------------
+# docs
+# ---------------------------------------------------------------------------
+
+
+def docs_cmd(
+    file: str,
+    output: Optional[str] = None,
+    output_format: str = "html",
+    format: str = "svg",
+    language: Optional[str] = None,
+    quiet: bool = False,
+    verbose: bool = False,
+    debug: bool = False,
+) -> None:
+    """Render diagram blocks in a markdown file to a rendered document."""
+    from pidraw.docs import render_md_file
+
+    start = time.perf_counter()
+
+    try:
+        result = render_md_file(file, output_format=output_format, fmt=format)
+    except Exception as exc:
+        logger.error("Docs render failed: %s", exc)
+        raise SystemExit(1) from exc
+
+    elapsed = (time.perf_counter() - start) * 1000
+
+    if output:
+        _write_output(output, result)
+        logger.info("Wrote %s", output)
+    else:
+        sys.stdout.write(result)
+        sys.stdout.write("\n")
+
+    if verbose or debug:
+        logger.info("Processed %s in %.0f ms", file, elapsed)
 
 
 # ---------------------------------------------------------------------------

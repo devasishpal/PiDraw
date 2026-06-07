@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pidraw"
 version = "0.1.0"
-description = "Universal diagram rendering platform — render any diagram language to SVG"
+description = "Universal diagram rendering platform — render any diagram language to SVG or PNG"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -63,8 +63,17 @@ docs = [
     "mkdocs>=1.5",
     "mkdocs-material>=9.0",
 ]
+png = [
+    "cairosvg>=2.7",
+]
+png-playwright = [
+    "playwright>=1.40",
+]
 all = [
-    "pidraw[dev,docs]",
+    "pidraw[dev,docs,png]",
+]
+all-png = [
+    "pidraw[dev,docs,png,png-playwright]",
 ]
 
 [tool.setuptools.packages.find]

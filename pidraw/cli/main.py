@@ -12,6 +12,7 @@ from pidraw.cli.commands import (
     batch_cmd,
     benchmark_cmd,
     detect_cmd,
+    docs_cmd,
     formats_cmd,
     optimize_cmd,
     plugins_cmd,
@@ -30,6 +31,7 @@ _verbose_opt = typer.Option(False, "--verbose", "-v", help="Show detailed output
 _debug_opt = typer.Option(False, "--debug", "-d", help="Show debug messages")
 _output_opt = typer.Option(None, "--output", "-o", help="Output file path")
 _language_opt = typer.Option(None, "--language", "-l", help="Explicit diagram language")
+_format_opt = typer.Option("svg", "--format", "-f", help="Output format (svg or png)")
 _optimize_opt = typer.Option(False, "--optimize", "-O", help="Optimise the output SVG")
 _recursive_opt = typer.Option(False, "--recursive", "-r", help="Scan subdirectories recursively")
 _debounce_opt = typer.Option(1.0, "--debounce", help="Watch debounce interval in seconds")
@@ -73,17 +75,46 @@ def render(
     file: str = typer.Argument(..., help="Diagram source file"),
     output: Optional[str] = _output_opt,
     language: Optional[str] = _language_opt,
+    format: str = _format_opt,
     optimize: bool = _optimize_opt,
     quiet: bool = _quiet_opt,
     verbose: bool = _verbose_opt,
     debug: bool = _debug_opt,
 ) -> None:
-    """Render a diagram file to SVG."""
+    """Render a diagram file to SVG or PNG."""
     render_cmd(
         file=file,
         output=output,
         language=language,
+        format=format,
         optimize=optimize,
+        quiet=quiet,
+        verbose=verbose,
+        debug=debug,
+    )
+
+
+# ---------------------------------------------------------------------------
+# docs
+# ---------------------------------------------------------------------------
+
+
+@app.command()
+def docs(
+    file: str = typer.Argument(..., help="Markdown file with diagram blocks"),
+    output: Optional[str] = _output_opt,
+    output_format: str = typer.Option("html", "--output-format", help="Output format (html or md)"),
+    format: str = _format_opt,
+    quiet: bool = _quiet_opt,
+    verbose: bool = _verbose_opt,
+    debug: bool = _debug_opt,
+) -> None:
+    """Render diagram blocks in a markdown file to a rendered HTML or Markdown document."""
+    docs_cmd(
+        file=file,
+        output=output,
+        output_format=output_format,
+        format=format,
         quiet=quiet,
         verbose=verbose,
         debug=debug,

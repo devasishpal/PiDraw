@@ -42,6 +42,7 @@ _auto_setup()
 # ---------------------------------------------------------------------------
 
 import pidraw.engines  # noqa: F401 — trigger auto-registration
+from pidraw.backend.png import svg_to_png
 from pidraw.backend.svg import SvgBackend
 from pidraw.benchmark import BenchmarkReport, BenchmarkResult, run_benchmarks
 from pidraw.cache import CacheManager, CacheStats
@@ -154,6 +155,7 @@ __all__ = [
     "BenchmarkReport",
     "BenchmarkResult",
     "RecoverableRenderingError",
+    "svg_to_png",
     "SvgBackend",
     "ExportPipeline",
     "Diagram",

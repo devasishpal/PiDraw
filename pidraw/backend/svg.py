@@ -30,6 +30,8 @@ class SvgBackend:
 
     def render(self, diagram: Diagram) -> str:
         vp = diagram.viewport
+        vx = vp.x if vp else 0
+        vy = vp.y if vp else 0
         vw = vp.width if vp else 800
         vh = vp.height if vp else 600
 
@@ -38,17 +40,20 @@ class SvgBackend:
             "xmlns:xlink": _XLINK_NS,
             "width": str(vw),
             "height": str(vh),
-            "viewBox": f"0 0 {vw} {vh}",
+            "viewBox": f"{vx} {vy} {vw} {vh}",
         })
 
         defs = SubElement(root, "defs")
         self._add_markers(defs, diagram)
+        self._add_filters(defs)
 
-        _ = SubElement(root, "rect", {
-            "width": "100%",
-            "height": "100%",
-            "fill": self._theme.get("background", "#ffffff"),
-        })
+        bg = self._theme.get("background")
+        if bg is not None:
+            _ = SubElement(root, "rect", {
+                "width": "100%",
+                "height": "100%",
+                "fill": bg,
+            })
 
         edges_g = SubElement(root, "g", {"id": "edges"})
         for edge in diagram.edges:
@@ -90,6 +95,19 @@ class SvgBackend:
                 })
                 defs.append(marker_elem)
 
+    def _add_filters(self, defs: Element) -> None:
+        shadow_filter = Element("filter", {
+            "id": "pidraw-shadow",
+            "x": "-10%", "y": "-10%",
+            "width": "130%", "height": "130%",
+        })
+        SubElement(shadow_filter, "feDropShadow", {
+            "dx": "2", "dy": "3",
+            "stdDeviation": "3",
+            "flood-color": "rgba(0,0,0,0.2)",
+        })
+        defs.append(shadow_filter)
+
     def _render_node(self, parent: Element, node: Node, diagram: Diagram) -> None:
         pos = node.position
         size = node.size
@@ -121,17 +139,7 @@ class SvgBackend:
         SubElement(g, "path", attrs)
 
         if style.shadow:
-            shadow_attrs = dict(attrs)
-            shadow_attrs["d"] = compute_shape_path(
-                shape_type,
-                type(pos)(pos.x + style.shadow_offset, pos.y + style.shadow_offset),
-                size,
-                style.corner_radius,
-            )
-            shadow_attrs["fill"] = style.shadow_color
-            shadow_attrs["stroke"] = "none"
-            shadow_attrs["opacity"] = "0.3"
-            g.insert(0, Element("path", shadow_attrs))
+            attrs["filter"] = "url(#pidraw-shadow)"
 
         if node.label is not None and node.label.text:
             self._render_label(g, node.label, x + w / 2, y + h / 2, style)

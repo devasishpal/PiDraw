@@ -44,8 +44,8 @@ def render_large_file(
     *,
     chunk_size: int = _CHUNK_SIZE,
     optimize: bool = False,
-    render_func: Optional[Callable[..., str]] = None,
-) -> str:
+    render_func: Optional[Callable[..., str | bytes]] = None,
+) -> str | bytes:
     """Render a potentially large diagram file.
 
     For files over ``_STREAM_THRESHOLD``, the source is written to a
@@ -84,7 +84,7 @@ def render_large_file(
     else:
         svg = _render_via_tempfile(file_path, language, render_func)
 
-    if optimize:
+    if optimize and isinstance(svg, str):
         from pidraw.optimizer import optimize_svg
         result = optimize_svg(svg)
         svg = result.svg
@@ -95,8 +95,8 @@ def render_large_file(
 def _render_via_tempfile(
     file_path: str,
     language: str | None,
-    render_func: Callable[..., str],
-) -> str:
+    render_func: Callable[..., str | bytes],
+) -> str | bytes:
     """Read source through a tempfile to avoid holding 100MB+ in memory.
 
     The file is read in chunks through a buffered reader and fed to

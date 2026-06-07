@@ -84,7 +84,7 @@ def _mb_usage() -> float:
 
 
 def benchmark_render_speed(
-    render_func: Callable[..., str],
+    render_func: Callable[..., str | bytes],
     iterations: int = 10,
 ) -> BenchmarkResult:
     """Measure raw render throughput."""
@@ -108,11 +108,11 @@ def benchmark_render_speed(
 
 
 def benchmark_optimization(
-    render_func: Callable[..., str],
+    render_func: Callable[..., str | bytes],
     iterations: int = 5,
 ) -> BenchmarkResult:
     """Measure optimisation pipeline speed."""
-    svgs: list[str] = []
+    svgs: list[str | bytes] = []
     for src in [_SAMPLE_MERMAID, _SAMPLE_LARGE_MERMAID, _SAMPLE_GRAPHVIZ]:
         try:
             svgs.append(render_func(src))
@@ -125,12 +125,19 @@ def benchmark_optimization(
             notes="No SVGs could be rendered",
         )
 
+    svg_strings = [s for s in svgs if isinstance(s, str)]
+    if not svg_strings:
+        return BenchmarkResult(
+            name="Optimization",
+            notes="No SVG strings could be rendered",
+        )
+
     times: list[float] = []
     sizes_before: list[int] = []
     sizes_after: list[int] = []
 
     for _ in range(iterations):
-        for svg in svgs:
+        for svg in svg_strings:
             start = time.perf_counter()
             result = optimize_svg(svg)
             times.append((time.perf_counter() - start) * 1000)
@@ -153,7 +160,7 @@ def benchmark_optimization(
 
 
 def benchmark_cache_efficiency(
-    render_func: Callable[..., str],
+    render_func: Callable[..., str | bytes],
     iterations: int = 3,
 ) -> BenchmarkResult:
     """Measure cache hit rate and speedup."""
@@ -183,7 +190,7 @@ def benchmark_cache_efficiency(
 
 
 def benchmark_large_diagram(
-    render_func: Callable[..., str],
+    render_func: Callable[..., str | bytes],
 ) -> BenchmarkResult:
     """Render a large diagram to stress-test throughput."""
     # Generate a 500-node Mermaid diagram
@@ -208,7 +215,7 @@ def benchmark_large_diagram(
         name="Large Diagram (500 nodes)",
         render_time_ms=round(elapsed, 2),
         memory_mb=round(mem_after - mem_before, 1),
-        output_size_bytes=len(svg.encode("utf-8")),
+        output_size_bytes=len(svg.encode("utf-8") if isinstance(svg, str) else svg),
     )
 
 
@@ -218,7 +225,7 @@ def benchmark_large_diagram(
 
 
 def run_benchmarks(
-    render_func: Callable[..., str] | None = None,
+    render_func: Callable[..., str | bytes] | None = None,
     *,
     quick: bool = False,
 ) -> BenchmarkReport:

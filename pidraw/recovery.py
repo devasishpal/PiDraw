@@ -17,12 +17,12 @@ def render_with_retry(
     source: str,
     language: str | None = None,
     *,
-    render_func: Callable[..., str],
+    render_func: Callable[..., str | bytes],
     max_retries: int = 2,
     retry_delay: float = 0.5,
     backoff: float = 2.0,
-        fallback_renderer: Callable[..., str] | None = None,
-) -> str:
+        fallback_renderer: Callable[..., str | bytes] | None = None,
+) -> str | bytes:
     """Render a diagram with automatic retry and fallback.
 
     Parameters
@@ -80,9 +80,9 @@ def safe_render(
     source: str,
     language: str | None = None,
     *,
-    render_func: Callable[..., str] | None = None,
+    render_func: Callable[..., str | bytes] | None = None,
     fallback_svg: str | None = None,
-) -> str:
+) -> str | bytes:
     """Render a diagram, returning a fallback SVG on failure instead of raising.
 
     Parameters

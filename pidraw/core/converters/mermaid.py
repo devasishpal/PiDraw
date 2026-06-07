@@ -15,7 +15,6 @@ from pidraw.core.models import (
     Position,
     Shape,
     ShapeType,
-    Size,
     Style,
 )
 
@@ -106,12 +105,13 @@ class MermaidConverter(DiagramConverter):
                         shape_type, label_text = ShapeType.RECTANGLE, nid
 
                     if nid not in diagram.nodes:
-                        tw = max(len(label_text) * 8, 60)
+                        from pidraw.core.shapes import compute_shape_size
+                        sz = compute_shape_size(shape_type, label_text)
                         node = Node(
                             id=nid,
                             label=Label(text=label_text),
                             shape=Shape(shape_type=shape_type),
-                            size=Size(tw + 40, 50),
+                            size=sz,
                         )
                         diagram.add_node(node)
 
@@ -142,29 +142,33 @@ class MermaidConverter(DiagramConverter):
 
                 if node_match.group(2) is not None:
                     label_text = node_match.group(2)
-                    shape_type = ShapeType.ROUNDED_RECTANGLE if line.strip().startswith("(") else ShapeType.RECTANGLE
+                    shape_type = ShapeType.RECTANGLE
                 elif node_match.group(3) is not None:
                     label_text = node_match.group(3)
                     shape_type = ShapeType.DIAMOND
-                elif node_match.group(4) is not None:
-                    label_text = node_match.group(4)
-                    shape_type = ShapeType.ROUNDED_RECTANGLE
-                elif node_match.group(5) is not None:
-                    label_text = node_match.group(5)
-                elif node_match.group(6) is not None:
-                    label_text = node_match.group(6)
-                    shape_type = ShapeType.HEXAGON
                 elif node_match.group(7) is not None:
                     label_text = node_match.group(7)
                     shape_type = ShapeType.DOUBLE_CIRCLE
+                elif node_match.group(4) is not None:
+                    label_text = node_match.group(4)
+                    shape_type = ShapeType.STADIUM
+                elif node_match.group(6) is not None:
+                    label_text = node_match.group(6)
+                    shape_type = ShapeType.HEXAGON
+                elif node_match.group(8) is not None:
+                    label_text = node_match.group(8)
+                    shape_type = ShapeType.PARALLELOGRAM
+                elif node_match.group(5) is not None:
+                    label_text = node_match.group(5)
 
                 if nid not in diagram.nodes:
-                    tw = max(len(label_text) * 8, 60)
+                    from pidraw.core.shapes import compute_shape_size
+                    sz = compute_shape_size(shape_type, label_text)
                     node = Node(
                         id=nid,
                         label=Label(text=label_text),
                         shape=Shape(shape_type=shape_type),
-                        size=Size(tw + 40, 50),
+                        size=sz,
                     )
                     diagram.add_node(node)
 
@@ -240,8 +244,8 @@ class MermaidConverter(DiagramConverter):
     def _ensure_positions(self, diagram: Diagram) -> None:
         nodes = diagram.all_nodes()
         layout = diagram.layout or Layout()
-        gap_x = layout.node_spacing + 140
-        gap_y = layout.layer_spacing + 50
+        gap_x = layout.node_spacing * 4
+        gap_y = layout.layer_spacing * 4
 
         deps: dict[str, list[str]] = {n.id: [] for n in nodes}
         for e in diagram.edges:
@@ -270,7 +274,15 @@ class MermaidConverter(DiagramConverter):
                     )
 
         if diagram.viewport is None:
+            min_x = min((n.position.x for n in nodes if n.position), default=0)
+            min_y = min((n.position.y for n in nodes if n.position), default=0)
             max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=800)
             max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=600)
+            pad = layout.padding * 2
             from pidraw.core.models import Viewport
-            diagram.viewport = Viewport(width=max_x + 40, height=max_y + 40)
+            diagram.viewport = Viewport(
+                x=min_x - pad,
+                y=min_y - pad,
+                width=max_x - min_x + pad * 2,
+                height=max_y - min_y + pad * 2,
+            )

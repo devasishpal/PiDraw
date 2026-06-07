@@ -227,10 +227,11 @@ def _render_wrapper(
     from pidraw.renderer import render as _render_single
     start = time.perf_counter()
     try:
-        svg = _render_single(source, language=language)
+        result = _render_single(source, language=language, format="svg")
+        assert isinstance(result, str), "pool expects SVG string output"
         elapsed = (time.perf_counter() - start) * 1000
         return RenderResult(
-            svg=svg,
+            svg=result,
             task_id=task_id,
             elapsed_ms=elapsed,
             language=language,

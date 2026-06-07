@@ -14,16 +14,19 @@ from pidraw.exceptions import UnsupportedLanguageError
 from pidraw.registry import get_renderer
 
 _RECOGNISED_LEVELS = frozenset({"fast", "balanced", "maximum"})
+_RECOGNISED_FORMATS = frozenset({"svg", "png"})
 
 
 def render(
     source: str,
     language: str | None = None,
     *,
+    format: str = "svg",
     optimize: str | bool = False,
     quality: bool = False,
-) -> str:
-    """Render a diagram source string into SVG.
+    scale: float = 1.0,
+) -> str | bytes:
+    """Render a diagram source string into SVG or PNG.
 
     This is the primary entry point for the PiDraw library.  When
     *language* is ``None`` the diagram language is auto-detected;
@@ -36,17 +39,23 @@ def render(
     language : str | None
         Explicit language identifier (e.g. ``"mermaid"``).  When
         ``None`` (default) the language is auto-detected.
+    format : str
+        Output format.  ``"svg"`` (default) returns an SVG string.
+        ``"png"`` returns PNG bytes.
     optimize : str or bool
         Optimisation level.  ``False`` (default) = no optimisation.
         ``True`` = ``"balanced"``.  String values: ``"fast"``,
         ``"balanced"``, ``"maximum"``.
     quality : bool
         If ``True``, run the quality enhancement pipeline on output.
+    scale : float
+        Scale factor for PNG output (default 1.0). Ignored for SVG.
 
     Returns
     -------
-    str
-        The rendered (and optionally optimised) SVG output.
+    str or bytes
+        The rendered output: SVG string for ``format="svg"``,
+        PNG bytes for ``format="png"``.
 
     Raises
     ------
@@ -58,6 +67,10 @@ def render(
         If the rendering process itself fails.
 
     """
+    fmt = format.lower()
+    if fmt not in _RECOGNISED_FORMATS:
+        raise ValueError(f"Unsupported format: {format!r}. Use 'svg' or 'png'.")
+
     if language:
         lang = language.lower()
     else:
@@ -78,6 +91,10 @@ def render(
         from pidraw.quality import QualityProcessor
         svg = QualityProcessor().process(svg)
 
+    if fmt == "png":
+        from pidraw.backend.png import svg_to_png
+        return svg_to_png(svg, scale=scale)
+
     return svg
 
 
@@ -85,10 +102,12 @@ def render_file(
     path: str,
     language: str | None = None,
     *,
+    format: str = "svg",
     optimize: str | bool = False,
     quality: bool = False,
-) -> str:
-    """Read a diagram file and render it to SVG.
+    scale: float = 1.0,
+) -> str | bytes:
+    """Read a diagram file and render it to SVG or PNG.
 
     Parameters
     ----------
@@ -96,15 +115,19 @@ def render_file(
         Path to the diagram source file.
     language : str | None
         Explicit language identifier.  Auto-detected when ``None``.
+    format : str
+        Output format.  ``"svg"`` (default) or ``"png"``.
     optimize : str or bool
         Optimisation level (see :func:`render`).
     quality : bool
         If ``True``, run quality enhancement pipeline.
+    scale : float
+        Scale factor for PNG output (default 1.0). Ignored for SVG.
 
     Returns
     -------
-    str
-        The rendered SVG output.
+    str or bytes
+        The rendered output: SVG string or PNG bytes.
 
     Raises
     ------
@@ -124,17 +147,26 @@ def render_file(
     with open(path, "r", encoding="utf-8-sig") as f:
         source = f.read().lstrip("\ufeff")
 
-    return render(source, language=language, optimize=optimize, quality=quality)
+    return render(
+        source,
+        language=language,
+        format=format,
+        optimize=optimize,
+        quality=quality,
+        scale=scale,
+    )
 
 
 def render_many(
     sources: Iterable[str],
     language: str | None = None,
     *,
+    format: str = "svg",
     max_workers: int | None = None,
     optimize: str | bool = False,
     quality: bool = False,
-) -> list[str]:
+    scale: float = 1.0,
+) -> list[str | bytes]:
     """Render multiple diagram sources in parallel.
 
     Parameters
@@ -143,17 +175,21 @@ def render_many(
         Iterable of diagram source strings.
     language :
         Explicit language override for all sources.
+    format :
+        Output format.  ``"svg"`` (default) or ``"png"``.
     max_workers :
         Maximum parallel workers (default = CPU count).
     optimize :
         Optimisation level (see :func:`render`).
     quality :
         If ``True``, run quality enhancement.
+    scale :
+        Scale factor for PNG output (default 1.0). Ignored for SVG.
 
     Returns
     -------
-    list[str]
-        Rendered SVG strings, one per input in the same order.
+    list[str | bytes]
+        Rendered outputs, one per input in the same order.
 
     """
     from pidraw.pool import RenderPool
@@ -163,7 +199,7 @@ def render_many(
         sources, language=language, show_progress=False
     )
 
-    svgs: list[str] = []
+    outputs: list[str | bytes] = []
     for r in results:
         if r.error:
             raise UnsupportedLanguageError(r.error)
@@ -173,8 +209,12 @@ def render_many(
         if quality:
             from pidraw.quality import QualityProcessor
             svg = QualityProcessor().process(svg)
-        svgs.append(svg)
-    return svgs
+        if format == "png":
+            from pidraw.backend.png import svg_to_png
+            outputs.append(svg_to_png(svg, scale=scale))
+        else:
+            outputs.append(svg)
+    return outputs
 
 
 def _apply_optimization(svg: str, level: str | bool) -> str:
