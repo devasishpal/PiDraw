@@ -26,7 +26,7 @@ def _detect_backend():
 
     if importlib_util.find_spec("cairosvg") is not None:
         try:
-            import cairosvg  # type: ignore[import-untyped]
+            import cairosvg  # type: ignore[import-not-found, import-untyped]
             cairosvg.svg2png  # verify it actually works
             return _render_cairosvg
         except OSError as e:
@@ -76,7 +76,7 @@ def _render_playwright(
     output_width: Optional[int] = None,
     output_height: Optional[int] = None,
 ) -> bytes:
-    from playwright.sync_api import sync_playwright  # type: ignore[import-untyped]
+    from playwright.sync_api import sync_playwright  # type: ignore[import-not-found, import-untyped]
 
     has_bg = background_color is not None
     bg_css = f"background: {background_color};" if has_bg else ""
