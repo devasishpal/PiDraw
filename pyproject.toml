@@ -44,11 +44,11 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/pidraw/pidraw"
-repository = "https://github.com/pidraw/pidraw"
-documentation = "https://pidraw.github.io/pidraw"
-changelog = "https://github.com/pidraw/pidraw/releases"
-issues = "https://github.com/pidraw/pidraw/issues"
+homepage = "https://github.com/devasishpal/PiDraw"
+repository = "https://github.com/devasishpal/PiDraw"
+documentation = "https://github.com/devasishpal/PiDraw"
+changelog = "https://github.com/devasishpal/PiDraw/releases"
+issues = "https://github.com/devasishpal/PiDraw/issues"
 
 [project.scripts]
 pidraw = "pidraw.cli.main:main"
