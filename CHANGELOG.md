@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.1 (2026-06-08)
+
+### Fixed
+- **CLI `render` crash on stdout** — `sys.stdout.write(result)` passed a `RenderResult` object instead of string; changed to `result.svg` so SVG output prints correctly without `-o` flag.
+- **CLI `_write_output` type mismatch** — `_write_output` now accepts `RenderResult` objects and uses `.save()`, fixing file output for all callers.
+- **Markmap import crash** — `markmap_render.js` missing from the wheel because `[tool.setuptools.package-data]` didn't include `*.js` files. Added `pidraw = ["**/*.js"]` so the script ships with the package.
+- **Engine init crash on import** — `MarkmapRenderer.__init__` raised `RenderError` (not caught by `engines/__init__.py`), crashing the entire CLI. Added `except PiDrawError` catch-all so any engine failure registers a `_BrokenRenderer` instead.
+
+### Changed
+- `pyproject.toml` — added `[tool.setuptools.package-data]` to bundle JS assets
+
 ## 1.2.0 (2026-06-08)
 
 ### Added

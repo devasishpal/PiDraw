@@ -284,7 +284,7 @@ Show the PiDraw version.
 
 ```bash
 pidraw version
-# pidraw v1.2.0
+# pidraw v1.2.1
 ```
 
 ---
