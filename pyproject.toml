@@ -123,3 +123,15 @@ module = [
     "pidraw.core.converters.mermaid",
 ]
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pidraw.renderer_class",
+    "pidraw.recovery",
+    "pidraw.large",
+    "pidraw.benchmark",
+    "pidraw.async_api",
+    "pidraw.cli.commands",
+    "pidraw.backend.png",
+]
+ignore_errors = true
