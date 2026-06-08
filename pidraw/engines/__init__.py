@@ -17,7 +17,12 @@ from pidraw.engines.tikz import TikzRenderer
 from pidraw.engines.vega import VegaRenderer
 from pidraw.engines.vega_lite import VegaLiteRenderer
 from pidraw.engines.wavedrom import WaveDromRenderer
-from pidraw.exceptions import EngineNotAvailableError, PiDrawError, RendererNotFoundError, RenderingError
+from pidraw.exceptions import (
+    EngineNotAvailableError,
+    PiDrawError,
+    RendererNotFoundError,
+    RenderingError,
+)
 from pidraw.registry import get_renderer, register_renderer
 
 _REGISTRATIONS: list[tuple[str, type[BaseRenderer], tuple[object, ...]]] = [

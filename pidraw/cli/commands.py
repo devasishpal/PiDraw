@@ -19,10 +19,10 @@ from pidraw.cli.setup import setup_all
 from pidraw.detector import detect_language
 from pidraw.diagnostics import analyze
 from pidraw.exceptions import PiDrawError
-from pidraw.result import RenderResult
 from pidraw.formats import format_table, status_table
 from pidraw.optimizer import optimize_svg
 from pidraw.registry import discover_plugins, get_renderer, list_renderers
+from pidraw.result import RenderResult
 
 logger = get_logger()
 
