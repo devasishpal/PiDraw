@@ -85,6 +85,9 @@ all-docx = [
 [tool.setuptools.packages.find]
 include = ["pidraw*"]
 
+[tool.setuptools.package-data]
+pidraw = ["**/*.js"]
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]

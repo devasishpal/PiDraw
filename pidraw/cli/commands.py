@@ -19,6 +19,7 @@ from pidraw.cli.setup import setup_all
 from pidraw.detector import detect_language
 from pidraw.diagnostics import analyze
 from pidraw.exceptions import PiDrawError
+from pidraw.result import RenderResult
 from pidraw.formats import format_table, status_table
 from pidraw.optimizer import optimize_svg
 from pidraw.registry import discover_plugins, get_renderer, list_renderers
@@ -116,10 +117,12 @@ def _read_source(file: str | Path) -> str:
     return text.lstrip("\ufeff")
 
 
-def _write_output(output_path: str | Path, data: str | bytes) -> None:
+def _write_output(output_path: str | Path, data: str | bytes | "RenderResult") -> None:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    if isinstance(data, bytes):
+    if isinstance(data, RenderResult):
+        data.save(str(path))
+    elif isinstance(data, bytes):
         path.write_bytes(data)
     else:
         path.write_text(data, encoding="utf-8")
@@ -194,10 +197,10 @@ def render_cmd(
 
     elapsed = (time.perf_counter() - start) * 1000
 
-    if fmt == "svg" and optimize and isinstance(result, str):
+    if fmt == "svg" and optimize:
         try:
-            opt = optimize_svg(result)
-            result = opt.svg
+            opt = optimize_svg(result.svg)
+            result.svg = opt.svg
             if verbose or debug:
                 logger.info(
                     "Optimised: %d \u2192 %d bytes (%.1f%%)",
@@ -217,7 +220,7 @@ def render_cmd(
         Spinner("").done(f"Wrote {out_path} ({elapsed:.0f}ms)")
     else:
         Spinner("").done(f"Rendered in {elapsed:.0f}ms")
-        sys.stdout.write(result)  # type: ignore[arg-type]
+        sys.stdout.write(result.svg)
         sys.stdout.write("\n")
 
 

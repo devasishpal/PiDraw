@@ -17,7 +17,7 @@ from pidraw.engines.tikz import TikzRenderer
 from pidraw.engines.vega import VegaRenderer
 from pidraw.engines.vega_lite import VegaLiteRenderer
 from pidraw.engines.wavedrom import WaveDromRenderer
-from pidraw.exceptions import EngineNotAvailableError, RendererNotFoundError, RenderingError
+from pidraw.exceptions import EngineNotAvailableError, PiDrawError, RendererNotFoundError, RenderingError
 from pidraw.registry import get_renderer, register_renderer
 
 _REGISTRATIONS: list[tuple[str, type[BaseRenderer], tuple[object, ...]]] = [
@@ -66,6 +66,13 @@ for _name, _cls, _args in _REGISTRATIONS:
         else:
             register_renderer(_name, _BrokenRenderer(_name, _exc, _exc.setup_command))
     except RenderingError as _exc:
+        if get_converter(_name) is not None:
+            register_renderer(_name, NativeRenderer(_name))
+        else:
+            register_renderer(_name, _BrokenRenderer(_name, _exc))
+    except PiDrawError as _exc:
+        # Catch-all: any other PiDrawError (e.g. RenderError from missing
+        # package data) registers a broken renderer instead of crashing.
         if get_converter(_name) is not None:
             register_renderer(_name, NativeRenderer(_name))
         else:
