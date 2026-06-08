@@ -1,5 +1,4 @@
 """Renderer for Excalidraw diagrams — parses JSON and renders SVG natively."""
-
 from __future__ import annotations
 
 import json
@@ -7,9 +6,14 @@ import math
 from typing import Any
 
 from pidraw.engines.base import BaseRenderer
-from pidraw.exceptions import RenderingError
+from pidraw.exceptions import RenderError
 
 _MAX_SIZE = 10 * 1024 * 1024
+_FONT_MAP: dict[int, str] = {
+    1: "Virgil, 'Comic Sans MS', cursive, sans-serif",
+    2: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+    3: "'Cascadia Code', 'Fira Code', 'Consolas', monospace",
+}
 
 
 def _parse_color(c: str) -> str:
@@ -28,8 +32,6 @@ def _render_element(elem: dict[str, Any]) -> str:
     opacity = float(elem.get("opacity", 100)) / 100
     angle = float(elem.get("angle", 0))
     rough = elem.get("roughness", 0)
-    fs = elem.get("fillStyle", "solid")
-
     fill = bg if bg != "transparent" else "none"
 
     parts: list[str] = []
@@ -57,41 +59,76 @@ def _render_element(elem: dict[str, Any]) -> str:
     elif t == "text":
         txt = elem.get("text", "")
         fs = float(elem.get("fontSize", 20))
+        font_family = _FONT_MAP.get(int(elem.get("fontFamily", 2)), "sans-serif")
         parts.append(
             f'<text x="{x}" y="{y + fs}" font-size="{fs}" '
+            f'font-family="{font_family}" '
             f'fill="{sc}" opacity="{opacity}">{_escape(txt)}</text>'
         )
     elif t in ("arrow", "line"):
         pts = elem.get("points", [])
         if pts and len(pts) >= 2:
             abs_pts = [(x + p[0], y + p[1]) for p in pts]
-            d = " ".join(f"{'M' if i==0 else 'L'}{px},{py}" for i, (px, py) in enumerate(abs_pts))
+            d = " ".join(
+                f"{'M' if i==0 else 'L'}{px},{py}"
+                for i, (px, py) in enumerate(abs_pts)
+            )
+            marker_end = ""
+            if t == "arrow" and elem.get("endBinding"):
+                marker_end = ' marker-end="url(#arrowhead)"'
             parts.append(
                 f'<path d="{d}" stroke="{sc}" stroke-width="{sw}" '
-                f'fill="none" opacity="{opacity}"/>'
+                f'fill="none" opacity="{opacity}"{marker_end}/>'
             )
     elif t == "freedraw":
         pts = elem.get("points", [])
         if pts and len(pts) >= 2:
             abs_pts = [(x + p[0], y + p[1]) for p in pts]
-            d = " ".join(f"{'M' if i==0 else 'L'}{px},{py}" for i, (px, py) in enumerate(abs_pts))
+            d = " ".join(
+                f"{'M' if i==0 else 'L'}{px},{py}"
+                for i, (px, py) in enumerate(abs_pts)
+            )
             parts.append(
-                f'<path d="{d}" stroke="{sc}" stroke-width="{sw}" '
+                f'<path d="{d}" stroke="{sc}" stroke-width="{max(sw, 1)}" '
                 f'fill="none" opacity="{opacity}"/>'
             )
+    elif t == "image":
+        parts.append(
+            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
+            f'fill="#e0e0e0" stroke="{sc}" stroke-width="{sw}" '
+            f'stroke-dasharray="4,2" opacity="{opacity}"/>'
+            f'<text x="{x + w/2}" y="{y + h/2}" '
+            f'text-anchor="middle" fill="#999" font-size="10">[image]</text>'
+        )
+    elif t in ("frame", "embeddable"):
+        parts.append(
+            f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
+            f'fill="none" stroke="#ccc" stroke-width="1" '
+            f'stroke-dasharray="6,3" opacity="{opacity}"/>'
+            f'<text x="{x + 4}" y="{y + 12}" fill="#999" '
+            f'font-size="10">{_escape(t)}</text>'
+        )
 
-    # Apply rotation transform
     if angle != 0 and parts:
         cx = x + w / 2
         cy = y + h / 2
         deg = math.degrees(angle)
-        parts = [f'<g transform="rotate({deg:.1f},{cx},{cy})">' + "".join(parts) + "</g>"]
+        parts = [
+            f'<g transform="rotate({deg:.1f},{cx},{cy})">'
+            + "".join(parts)
+            + "</g>"
+        ]
 
     return "".join(parts)
 
 
 def _escape(t: str) -> str:
-    return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return (
+        t.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
 
 
 class ExcalidrawRenderer(BaseRenderer):
@@ -104,16 +141,21 @@ class ExcalidrawRenderer(BaseRenderer):
 
     def render(self, source: str) -> str:
         if not source or not source.strip():
-            raise RenderingError("Excalidraw source is empty")
+            raise RenderError("excalidraw", "Excalidraw source is empty")
         if "\x00" in source:
-            raise RenderingError("Excalidraw source contains null bytes")
+            raise RenderError("excalidraw", "Excalidraw source contains null bytes")
         if len(source.encode("utf-8")) > _MAX_SIZE:
-            raise RenderingError(f"Excalidraw source exceeds {_MAX_SIZE // 1024 // 1024} MB limit")
+            raise RenderError(
+                "excalidraw",
+                f"Excalidraw source exceeds {_MAX_SIZE // 1024 // 1024} MB limit",
+            )
 
         try:
             data = json.loads(source)
         except json.JSONDecodeError as exc:
-            raise RenderingError(f"Excalidraw source is not valid JSON: {exc}") from exc
+            raise RenderError(
+                "excalidraw", f"Excalidraw source is not valid JSON: {exc}"
+            )
 
         elements = data if isinstance(data, list) else data.get("elements", [])
 
@@ -145,13 +187,19 @@ class ExcalidrawRenderer(BaseRenderer):
             f'style="background:#ffffff">'
         ]
 
-        for el in elements:
-            svg_parts.append(_render_element(el))
+        # Per-element try/except — a single bad element must not abort the whole render
+        for i, el in enumerate(elements):
+            try:
+                svg_parts.append(_render_element(el))
+            except Exception as exc:
+                svg_parts.append(
+                    f'<!-- excalidraw element {i} skipped: {_escape(str(exc))} -->'
+                )
 
         svg_parts.append("</svg>")
         svg = "".join(svg_parts)
 
         if "<svg" not in svg:
-            raise RenderingError("Rendered output does not contain <svg>")
+            raise RenderError("excalidraw", "Rendered output does not contain <svg>")
 
         return svg

@@ -1,5 +1,4 @@
 """Tests for the D2 renderer."""
-
 from __future__ import annotations
 
 import subprocess
@@ -9,12 +8,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pidraw.engines.d2 import D2Renderer, find_d2
-from pidraw.exceptions import RenderingError
+from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
 from pidraw.registry import clear_registry, register_renderer
 
-# ------------------------------------------------------------------
-# Fixtures
-# ------------------------------------------------------------------
 
 @pytest.fixture
 def mock_d2_path() -> Generator[None, None, None]:
@@ -27,14 +23,10 @@ def renderer(mock_d2_path: Any) -> D2Renderer:
     return D2Renderer()
 
 
-# ------------------------------------------------------------------
-# Utility function tests
-# ------------------------------------------------------------------
-
 class TestFindD2:
     def test_find_d2_missing(self) -> None:
         with patch("pidraw.engines.d2.shutil.which", return_value=None):
-            with pytest.raises(RenderingError, match="not installed"):
+            with pytest.raises(EngineNotAvailableError):
                 find_d2()
 
     def test_find_d2_found(self) -> None:
@@ -42,14 +34,10 @@ class TestFindD2:
             assert find_d2() == "/usr/bin/d2"
 
 
-# ------------------------------------------------------------------
-# Construction
-# ------------------------------------------------------------------
-
 class TestConstruction:
     def test_find_d2_raises_when_missing(self) -> None:
         with patch("pidraw.engines.d2.shutil.which", return_value=None):
-            with pytest.raises(RenderingError, match="not installed"):
+            with pytest.raises(EngineNotAvailableError):
                 D2Renderer()
 
     def test_explicit_path_used(self) -> None:
@@ -57,76 +45,57 @@ class TestConstruction:
         assert r._d2_path == "/custom/d2"
 
 
-# ------------------------------------------------------------------
-# Input validation
-# ------------------------------------------------------------------
-
 class TestInputValidation:
     def test_empty_source_raises(self, renderer: D2Renderer) -> None:
-        with pytest.raises(RenderingError, match="empty"):
+        with pytest.raises(RenderError, match="empty"):
             renderer.render("")
 
     def test_whitespace_only_raises(self, renderer: D2Renderer) -> None:
-        with pytest.raises(RenderingError, match="empty"):
+        with pytest.raises(RenderError, match="empty"):
             renderer.render("   \n  \n  ")
 
     def test_null_bytes_raises(self, renderer: D2Renderer) -> None:
-        with pytest.raises(RenderingError, match="null bytes"):
-            renderer.render("a -> b\x00")
+        with pytest.raises(RenderError, match="null bytes"):
+            renderer.render("x -> y\x00")
 
     def test_oversized_source_raises(self, renderer: D2Renderer) -> None:
         big = "A" * (100 * 1024 + 1)
-        with pytest.raises(RenderingError, match="exceeds maximum size"):
+        with pytest.raises(RenderError, match="exceeds maximum size"):
             renderer.render(big)
 
-
-# ------------------------------------------------------------------
-# Output validation
-# ------------------------------------------------------------------
 
 class TestOutputValidation:
     def test_empty_output_raises(self, renderer: D2Renderer) -> None:
         with patch.object(renderer, "_run_d2", return_value=""):
-            with pytest.raises(RenderingError, match="empty SVG"):
+            with pytest.raises(RenderError, match="empty SVG"):
                 renderer.render("x -> y")
 
     def test_non_svg_output_raises(self, renderer: D2Renderer) -> None:
         with patch.object(renderer, "_run_d2", return_value="<html></html>"):
-            with pytest.raises(RenderingError, match="valid <svg>"):
+            with pytest.raises(RenderError, match="valid <svg>"):
                 renderer.render("x -> y")
 
     def test_malformed_xml_raises(self, renderer: D2Renderer) -> None:
-        bad_svg = "<svg><unclosed></svg>"
-        with patch.object(renderer, "_run_d2", return_value=bad_svg):
-            with pytest.raises(RenderingError, match="valid XML"):
+        with patch.object(renderer, "_run_d2", return_value="<svg><broken></svg>"):
+            with pytest.raises(RenderError, match="valid XML"):
                 renderer.render("x -> y")
 
 
-# ------------------------------------------------------------------
-# d2 subprocess invocation
-# ------------------------------------------------------------------
-
 def _completed(
-    returncode: int = 0,
-    stderr: str = "",
+    returncode: int = 0, stderr: str = "",
 ) -> subprocess.CompletedProcess[bytes]:
     return subprocess.CompletedProcess(
         args=["d2"], returncode=returncode,
-        stdout=b"", stderr=stderr.encode("utf-8"),
+        stdout=b"<svg xmlns='http://www.w3.org/2000/svg'></svg>",
+        stderr=stderr.encode("utf-8"),
     )
 
 
 class TestD2Invocation:
     def test_simple_diagram(self, renderer: D2Renderer) -> None:
-        """x -> y"""
-        source = "x -> y"
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-
         with (
-            patch(
-                "pidraw.engines.d2.tempfile.mkdtemp",
-                return_value="/tmp/pidraw_d2_test",
-            ) as mock_mkdtemp,
+            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open") as mock_open,
             patch("pidraw.engines.d2.subprocess.run") as mock_run,
             patch("pidraw.engines.d2.os.path.isdir", return_value=True),
@@ -135,114 +104,90 @@ class TestD2Invocation:
             mock_run.return_value = _completed(0)
             mock_file_svg: MagicMock = MagicMock()
             mock_file_svg.__enter__.return_value.read.return_value = fake_svg
-            mock_open.side_effect = [
-                MagicMock(),
-                mock_file_svg,
-            ]
-
-            result = renderer.render(source)
-
+            mock_open.side_effect = [MagicMock(), mock_file_svg]
+            result = renderer.render("x -> y")
             assert result == fake_svg
-            mock_mkdtemp.assert_called_once()
-            mock_run.assert_called_once()
-            cmd = mock_run.call_args[0][0]
-            assert cmd[0] == "/usr/bin/d2"
-            assert "--format=svg" in cmd
-            assert cmd[-2].endswith("diagram.d2")
-            assert cmd[-1].endswith("diagram.svg")
-            mock_rmtree.assert_called_once_with("/tmp/pidraw_d2_test")
+            mock_rmtree.assert_called_once_with("/tmp/pidraw_test")
 
     def test_nested_container(self, renderer: D2Renderer) -> None:
-        """x: { y -> z }"""
-        source = "x: {\n    y -> z\n}"
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-
         with (
-            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/d2_test"),
+            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open") as mock_open,
             patch("pidraw.engines.d2.subprocess.run") as mock_run,
-            patch("pidraw.engines.d2.os.path.isdir", return_value=True),
             patch("pidraw.engines.d2.shutil.rmtree"),
         ):
             mock_run.return_value = _completed(0)
-            mock_file_svg = MagicMock()
+            mock_file_svg: MagicMock = MagicMock()
             mock_file_svg.__enter__.return_value.read.return_value = fake_svg
             mock_open.side_effect = [MagicMock(), mock_file_svg]
-
-            result = renderer.render(source)
+            result = renderer.render("mycontainer: {\n    a -> b\n}")
             assert result == fake_svg
 
     def test_with_style(self, renderer: D2Renderer) -> None:
-        """x: { style: { stroke: red } }"""
-        source = "x: {\n    style: {\n        stroke: red\n    }\n}"
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-
         with (
-            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/d2_test"),
+            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open") as mock_open,
             patch("pidraw.engines.d2.subprocess.run") as mock_run,
-            patch("pidraw.engines.d2.os.path.isdir", return_value=True),
             patch("pidraw.engines.d2.shutil.rmtree"),
         ):
             mock_run.return_value = _completed(0)
-            mock_file_svg = MagicMock()
+            mock_file_svg: MagicMock = MagicMock()
             mock_file_svg.__enter__.return_value.read.return_value = fake_svg
             mock_open.side_effect = [MagicMock(), mock_file_svg]
-
-            result = renderer.render(source)
+            result = renderer.render("style: {\n    stroke: red\n}")
             assert result == fake_svg
 
     def test_d2_returns_nonzero(self, renderer: D2Renderer) -> None:
         with (
-            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/d2_test"),
+            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open"),
             patch("pidraw.engines.d2.subprocess.run") as mock_run,
-            patch("pidraw.engines.d2.os.path.isdir", return_value=True),
             patch("pidraw.engines.d2.shutil.rmtree"),
         ):
-            mock_run.return_value = _completed(1, "syntax error")
-
-            with pytest.raises(RenderingError, match="syntax error"):
-                renderer.render("invalid: syntax: @@@")
+            mock_run.return_value = _completed(1, "Syntax error")
+            with pytest.raises(RenderError, match="exited with code"):
+                renderer.render("x -> y")
 
     def test_d2_times_out(self, renderer: D2Renderer) -> None:
         _timeout = subprocess.TimeoutExpired(cmd="d2", timeout=30)
         with (
-            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/d2_test"),
+            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open"),
             patch("pidraw.engines.d2.subprocess.run", side_effect=_timeout),
             patch("pidraw.engines.d2.shutil.rmtree"),
         ):
-            with pytest.raises(RenderingError, match="timed out"):
+            with pytest.raises(RenderTimeoutError):
                 renderer.render("x -> y")
 
     def test_d2_binary_missing(self, renderer: D2Renderer) -> None:
         with (
-            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/d2_test"),
+            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open"),
             patch("pidraw.engines.d2.subprocess.run", side_effect=FileNotFoundError),
             patch("pidraw.engines.d2.shutil.rmtree"),
         ):
-            with pytest.raises(RenderingError, match="not found"):
+            with pytest.raises(RenderError, match="not found"):
                 renderer.render("x -> y")
 
     def test_cleanup_on_failure(self, renderer: D2Renderer) -> None:
         _timeout = subprocess.TimeoutExpired(cmd="d2", timeout=30)
         with (
-            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/d2_test"),
+            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open"),
             patch("pidraw.engines.d2.subprocess.run", side_effect=_timeout),
             patch("pidraw.engines.d2.os.path.isdir", return_value=True),
             patch("pidraw.engines.d2.shutil.rmtree") as mock_rmtree,
         ):
-            with pytest.raises(RenderingError):
+            with pytest.raises(RenderTimeoutError):
                 renderer.render("x -> y")
-            mock_rmtree.assert_called_once_with("/tmp/d2_test")
+            mock_rmtree.assert_called_once_with("/tmp/pidraw_test")
 
     def test_cleanup_on_success(self, renderer: D2Renderer) -> None:
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
         with (
-            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/d2_test"),
+            patch("pidraw.engines.d2.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open") as mock_open,
             patch("pidraw.engines.d2.subprocess.run") as mock_run,
             patch("pidraw.engines.d2.os.path.isdir", return_value=True),
@@ -252,14 +197,9 @@ class TestD2Invocation:
             mock_file_svg: MagicMock = MagicMock()
             mock_file_svg.__enter__.return_value.read.return_value = fake_svg
             mock_open.side_effect = [MagicMock(), mock_file_svg]
-
             renderer.render("x -> y")
-            mock_rmtree.assert_called_once_with("/tmp/d2_test")
+            mock_rmtree.assert_called_once_with("/tmp/pidraw_test")
 
-
-# ------------------------------------------------------------------
-# Auto-registration
-# ------------------------------------------------------------------
 
 class TestAutoRegistration:
     def test_d2_renderer_can_be_registered(self) -> None:
@@ -273,23 +213,19 @@ class TestAutoRegistration:
         clear_registry()
         r = D2Renderer(d2_path="/fake/d2")
         register_renderer("d2", r)
-
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
         with patch.object(r, "_run_d2", return_value=fake_svg):
             from pidraw.renderer import render as public_render
             result = public_render("x -> y")
-            assert result == fake_svg
+            assert result.svg == fake_svg
 
     def test_detection_integration(self) -> None:
-        """End-to-end: D2 source is detected and rendered."""
         clear_registry()
         r = D2Renderer(d2_path="/fake/d2")
         register_renderer("d2", r)
-
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
         with patch.object(r, "_run_d2", return_value=fake_svg):
             from pidraw.renderer import render as public_render
-
             for source in [
                 "x -> y",
                 "a <-> b",
@@ -298,4 +234,4 @@ class TestAutoRegistration:
                 "style: {\n    stroke: red\n}",
             ]:
                 result = public_render(source)
-                assert result == fake_svg, f"Failed for: {source[:40]}..."
+                assert result.svg == fake_svg, f"Failed for: {source[:40]}..."

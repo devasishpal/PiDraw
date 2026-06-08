@@ -4,44 +4,16 @@ Converts diagram source code from many diagram languages into
 optimised SVG through a plugin-based renderer architecture.
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
 
-# ---------------------------------------------------------------------------
-# Auto-setup: install missing CLI tools on first import (lazy, non-blocking)
-# ---------------------------------------------------------------------------
-import atexit
-import os
-import threading
+try:
+    __version__ = version("pidraw")
+except PackageNotFoundError:
+    __version__ = "0.0.0+dev"
 
-
-def _auto_setup() -> None:
-    """Run ``pidraw setup`` once in a background thread."""
-    marker = os.path.join(os.path.dirname(__file__), ".setup_done")
-    if os.path.exists(marker):
-        return
-
-    def _run():
-        try:
-            from pidraw.cli.setup import setup_all
-            setup_all()
-        except Exception:
-            pass
-        finally:
-            try:
-                open(marker, "w").close()
-            except OSError:
-                pass
-
-    t = threading.Thread(target=_run, daemon=True, name="pidraw-setup")
-    t.start()
-    atexit.register(t.join)
-
-
-_auto_setup()
-
-# ---------------------------------------------------------------------------
 
 import pidraw.engines  # noqa: F401 — trigger auto-registration
+from pidraw.async_api import arender, arender_file
 from pidraw.backend.png import svg_to_png
 from pidraw.backend.svg import SvgBackend
 from pidraw.benchmark import BenchmarkReport, BenchmarkResult, run_benchmarks
@@ -84,8 +56,17 @@ from pidraw.engines.graphviz import GraphvizRenderer
 from pidraw.engines.mermaid import MermaidRenderer
 from pidraw.engines.plantuml import PlantUMLRenderer
 from pidraw.exceptions import (
+    EngineNotAvailableError,
+    LanguageNotSupportedError,
+    LayoutError,
+    OptimizationError,
+    ParseError,
     PiDrawError,
     PluginError,
+    PngConversionError,
+    RecoverableRenderingError,
+    RenderError,
+    RenderTimeoutError,
     RendererNotFoundError,
     RenderingError,
     UnsupportedLanguageError,
@@ -113,6 +94,8 @@ from pidraw.registry import (
     register_renderer,
 )
 from pidraw.renderer import render, render_file, render_many
+from pidraw.renderer_class import Renderer
+from pidraw.result import RenderResult
 from pidraw.themes import apply_theme, get_theme, list_themes
 from pidraw.typography import FontSpec, estimate_text_size
 
@@ -123,6 +106,10 @@ __all__ = [
     "render_large_file",
     "render_native",
     "render_native_from_diagram",
+    "Renderer",
+    "RenderResult",
+    "arender",
+    "arender_file",
     "detect",
     "detect_language",
     "analyze",
@@ -191,6 +178,14 @@ __all__ = [
     "D2Converter",
     "ASCIIConverter",
     "PiDrawError",
+    "LanguageNotSupportedError",
+    "EngineNotAvailableError",
+    "RenderError",
+    "ParseError",
+    "LayoutError",
+    "RenderTimeoutError",
+    "OptimizationError",
+    "PngConversionError",
     "UnsupportedLanguageError",
     "RendererNotFoundError",
     "RenderingError",

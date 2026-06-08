@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pidraw.engines.mermaid import MermaidRenderer
-from pidraw.exceptions import RenderingError
+from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
 from pidraw.registry import clear_registry, register_renderer
 
 # ------------------------------------------------------------------
@@ -34,8 +34,8 @@ def renderer(mock_mmdc_path: Any) -> MermaidRenderer:
 class TestConstruction:
     def test_find_mmdc_raises_when_missing(self) -> None:
         with patch("pidraw.engines.mermaid.shutil.which", return_value=None):
-            with pytest.raises(RenderingError, match="mmdc.*not installed"):
-                MermaidRenderer()
+            with pytest.raises(EngineNotAvailableError, match="mmdc"):
+                MermaidRenderer._find_mmdc()
 
     def test_explicit_path_used(self) -> None:
         r = MermaidRenderer(mmdc_path="/custom/mmdc")
@@ -48,20 +48,20 @@ class TestConstruction:
 
 class TestInputValidation:
     def test_empty_source_raises(self, renderer: MermaidRenderer) -> None:
-        with pytest.raises(RenderingError, match="empty"):
+        with pytest.raises(RenderError, match="empty"):
             renderer.render("")
 
     def test_whitespace_only_raises(self, renderer: MermaidRenderer) -> None:
-        with pytest.raises(RenderingError, match="empty"):
+        with pytest.raises(RenderError, match="empty"):
             renderer.render("   \n  \n  ")
 
     def test_null_bytes_raises(self, renderer: MermaidRenderer) -> None:
-        with pytest.raises(RenderingError, match="null bytes"):
+        with pytest.raises(RenderError, match="null bytes"):
             renderer.render("graph TD;\x00A-->B;")
 
     def test_oversized_source_raises(self, renderer: MermaidRenderer) -> None:
         big = "A" * (100 * 1024 + 1)
-        with pytest.raises(RenderingError, match="exceeds maximum size"):
+        with pytest.raises(RenderError, match="exceeds maximum size"):
             renderer.render(big)
 
 
@@ -72,12 +72,12 @@ class TestInputValidation:
 class TestOutputValidation:
     def test_empty_svg_raises(self, renderer: MermaidRenderer) -> None:
         with patch.object(renderer, "_run_mmdc", return_value=""):
-            with pytest.raises(RenderingError, match="empty SVG"):
+            with pytest.raises(RenderError, match="empty SVG"):
                 renderer.render("graph TD; A-->B;")
 
     def test_non_svg_output_raises(self, renderer: MermaidRenderer) -> None:
         with patch.object(renderer, "_run_mmdc", return_value="<html></html>"):
-            with pytest.raises(RenderingError, match="valid <svg>"):
+            with pytest.raises(RenderError, match="valid <svg>"):
                 renderer.render("graph TD; A-->B;")
 
 
@@ -137,7 +137,7 @@ class TestMmdcInvocation:
         ):
             mock_run.return_value = _completed(1, "Syntax error in diagram")
 
-            with pytest.raises(RenderingError, match="Syntax error"):
+            with pytest.raises(RenderError, match="exited with code"):
                 renderer.render("graph TD; INVALID;")
 
     def test_mmdc_times_out(self, renderer: MermaidRenderer) -> None:
@@ -148,7 +148,7 @@ class TestMmdcInvocation:
             patch("pidraw.engines.mermaid.subprocess.run", side_effect=_timeout),
             patch("pidraw.engines.mermaid.shutil.rmtree"),
         ):
-            with pytest.raises(RenderingError, match="timed out"):
+            with pytest.raises(RenderTimeoutError, match="timed out"):
                 renderer.render("graph TD; A-->B;")
 
     def test_mmdc_binary_missing(self, renderer: MermaidRenderer) -> None:
@@ -158,7 +158,7 @@ class TestMmdcInvocation:
             patch("pidraw.engines.mermaid.subprocess.run", side_effect=FileNotFoundError),
             patch("pidraw.engines.mermaid.shutil.rmtree"),
         ):
-            with pytest.raises(RenderingError, match="not found"):
+            with pytest.raises(RenderError, match="not found"):
                 renderer.render("graph TD; A-->B;")
 
     def test_cleanup_on_failure(self, renderer: MermaidRenderer) -> None:
@@ -170,7 +170,7 @@ class TestMmdcInvocation:
             patch("pidraw.engines.mermaid.os.path.isdir", return_value=True),
             patch("pidraw.engines.mermaid.shutil.rmtree") as mock_rmtree,
         ):
-            with pytest.raises(RenderingError):
+            with pytest.raises(RenderTimeoutError):
                 renderer.render("graph TD; A-->B;")
             mock_rmtree.assert_called_once_with("/tmp/pidraw_test")
 
@@ -212,4 +212,4 @@ class TestAutoRegistration:
         with patch.object(r, "_run_mmdc", return_value=fake_svg):
             from pidraw.renderer import render as public_render
             result = public_render("graph TD; A-->B;")
-            assert result == fake_svg
+            assert result.svg == fake_svg

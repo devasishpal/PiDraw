@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -23,6 +24,53 @@ from pidraw.optimizer import optimize_svg
 from pidraw.registry import discover_plugins, get_renderer, list_renderers
 
 logger = get_logger()
+
+# ---------------------------------------------------------------------------
+# Spinner — simple loading indicator
+# ---------------------------------------------------------------------------
+
+
+class Spinner:
+    """Simple CLI spinner shown during long operations."""
+
+    def __init__(self, message: str = "Processing") -> None:
+        self._message = message
+        self._running = False
+        self._thread: threading.Thread | None = None
+
+    def __enter__(self) -> Spinner:
+        self.start()
+        return self
+
+    def __exit__(self, *args) -> None:
+        self.stop()
+
+    def start(self) -> None:
+        self._running = True
+        self._thread = threading.Thread(target=self._spin, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=0.5)
+        sys.stderr.write("\r" + " " * (len(self._message) + 4) + "\r")
+        sys.stderr.flush()
+
+    def done(self, detail: str = "") -> None:
+        msg = f"Done! {detail}" if detail else "Done!"
+        sys.stderr.write(f"\r{msg}\n")
+        sys.stderr.flush()
+
+    def _spin(self) -> None:
+        chars = "|/-\\"
+        i = 0
+        while self._running:
+            sys.stderr.write(f"\r{chars[i % 4]} {self._message}...")
+            sys.stderr.flush()
+            i += 1
+            time.sleep(0.12)
+
 
 # ---------------------------------------------------------------------------
 # Recognised diagram file extensions
@@ -133,11 +181,16 @@ def render_cmd(
     source = _read_source(file)
     start = time.perf_counter()
 
+    spinner = Spinner("Rendering")
+    spinner.start()
     try:
         result = render(source, language=language, format=fmt)
     except PiDrawError as exc:
+        spinner.stop()
         logger.error("Render failed: %s", exc)
         raise SystemExit(1) from exc
+
+    spinner.stop()
 
     elapsed = (time.perf_counter() - start) * 1000
 
@@ -157,17 +210,15 @@ def render_cmd(
 
     if output:
         _write_output(output, result)
-        logger.info("Wrote %s", output)
+        Spinner("").done(f"Wrote {output} ({elapsed:.0f}ms)")
     elif fmt == "png":
         out_path = Path(file).with_suffix(".png")
         _write_output(str(out_path), result)
-        logger.info("Wrote %s", out_path)
+        Spinner("").done(f"Wrote {out_path} ({elapsed:.0f}ms)")
     else:
+        Spinner("").done(f"Rendered in {elapsed:.0f}ms")
         sys.stdout.write(result)  # type: ignore[arg-type]
         sys.stdout.write("\n")
-
-    if verbose or debug:
-        logger.info("Rendered %s in %.0f ms", file, elapsed)
 
 
 # ---------------------------------------------------------------------------
@@ -413,6 +464,9 @@ def batch_cmd(
         logger.warning("No diagram files found in %s", paths)
         raise SystemExit(0)
 
+    spinner = Spinner(f"Rendering {len(files)} files")
+    spinner.start()
+
     use_for = "recursive " if recursive else ""
     logger.info("Found %d %sdiagram file(s)", len(files), use_for)
 
@@ -444,6 +498,9 @@ def batch_cmd(
                 _show_simple_progress(i, len(files), n_fail)
 
     elapsed = (time.perf_counter() - start_total) * 1000
+
+    spinner.stop()
+    spinner.done(f"Rendered {n_ok}/{len(files)} files ({elapsed:.0f}ms)")
 
     _print_batch_summary(BatchSummary(
         total=len(files),
@@ -688,6 +745,7 @@ def docs_cmd(
     output_format: str = "html",
     format: str = "svg",
     language: Optional[str] = None,
+    no_bg: bool = False,
     quiet: bool = False,
     verbose: bool = False,
     debug: bool = False,
@@ -695,19 +753,36 @@ def docs_cmd(
     """Render diagram blocks in a markdown file to a rendered document."""
     from pidraw.docs import render_md_file
 
+    spinner = Spinner("Rendering diagrams")
+    spinner.start()
     start = time.perf_counter()
 
+    use_fmt = "png" if output_format == "docx" else format
+    transparent = no_bg or use_fmt == "png"
+    use_scale = 4.0 if output_format == "docx" else 1.0
+
     try:
-        result = render_md_file(file, output_format=output_format, fmt=format)
+        result = render_md_file(
+            file,
+            output_format=output_format,
+            fmt=use_fmt,
+            scale=use_scale,
+            transparent=transparent,
+        )
     except Exception as exc:
+        spinner.stop()
         logger.error("Docs render failed: %s", exc)
         raise SystemExit(1) from exc
 
     elapsed = (time.perf_counter() - start) * 1000
+    spinner.stop()
 
     if output:
         _write_output(output, result)
-        logger.info("Wrote %s", output)
+        spinner.done(f"Wrote {output} ({elapsed:.0f}ms)")
+    elif isinstance(result, bytes):
+        logger.info("Output available at %s (use --output to save)", file)
+        sys.stdout.buffer.write(result)
     else:
         sys.stdout.write(result)
         sys.stdout.write("\n")

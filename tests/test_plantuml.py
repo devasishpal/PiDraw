@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pidraw.engines.plantuml import PlantUMLRenderer, find_jar, find_java, find_plantuml
-from pidraw.exceptions import RenderingError
+from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
 from pidraw.registry import clear_registry, register_renderer
 
 # ------------------------------------------------------------------
@@ -35,7 +35,7 @@ def renderer(mock_cmd: Any) -> PlantUMLRenderer:
 class TestFindUtils:
     def test_find_java_missing(self) -> None:
         with patch("pidraw.engines.plantuml.shutil.which", return_value=None):
-            with pytest.raises(RenderingError, match="Java is not installed"):
+            with pytest.raises(EngineNotAvailableError, match="java"):
                 find_java()
 
     def test_find_java_found(self) -> None:
@@ -44,7 +44,7 @@ class TestFindUtils:
 
     def test_find_plantuml_missing(self) -> None:
         with patch("pidraw.engines.plantuml.shutil.which", return_value=None):
-            with pytest.raises(RenderingError, match="not found on PATH"):
+            with pytest.raises(EngineNotAvailableError, match="plantuml"):
                 find_plantuml()
 
     def test_find_plantuml_found(self) -> None:
@@ -63,7 +63,7 @@ class TestFindUtils:
             patch.dict(os.environ, {"PLANTUML_JAR": "/nonexistent.jar"}),
             patch("pidraw.engines.plantuml.os.path.isfile", return_value=False),
         ):
-            with pytest.raises(RenderingError, match="not found"):
+            with pytest.raises(EngineNotAvailableError, match="plantuml.jar"):
                 find_jar()
 
     def test_find_jar_common_paths(self) -> None:
@@ -81,7 +81,7 @@ class TestFindUtils:
             patch.dict(os.environ, {}, clear=True),
             patch("pidraw.engines.plantuml.os.path.isfile", return_value=False),
         ):
-            with pytest.raises(RenderingError, match="not found"):
+            with pytest.raises(EngineNotAvailableError, match="plantuml.jar"):
                 find_jar()
 
 
@@ -111,14 +111,15 @@ class TestCommandResolution:
 
         with (
             patch("pidraw.engines.plantuml.shutil.which", side_effect=_which),
-            patch("pidraw.engines.plantuml.find_jar", return_value="/opt/plantuml.jar"),
+            patch.dict(os.environ, {"PLANTUML_JAR": "/opt/plantuml.jar"}),
+            patch("pidraw.engines.plantuml.os.path.isfile", return_value=True),
         ):
             cmd = PlantUMLRenderer._resolve_command()
             assert cmd == ["/usr/bin/java", "-jar", "/opt/plantuml.jar"]
 
     def test_nothing_found(self) -> None:
         with patch("pidraw.engines.plantuml.shutil.which", return_value=None):
-            with pytest.raises(RenderingError, match="requires either"):
+            with pytest.raises(EngineNotAvailableError, match="plantuml"):
                 PlantUMLRenderer._resolve_command()
 
 
@@ -142,20 +143,20 @@ class TestConstruction:
 
 class TestInputValidation:
     def test_empty_source_raises(self, renderer: PlantUMLRenderer) -> None:
-        with pytest.raises(RenderingError, match="empty"):
+        with pytest.raises(RenderError, match="empty"):
             renderer.render("")
 
     def test_whitespace_only_raises(self, renderer: PlantUMLRenderer) -> None:
-        with pytest.raises(RenderingError, match="empty"):
+        with pytest.raises(RenderError, match="empty"):
             renderer.render("   \n  \n  ")
 
     def test_null_bytes_raises(self, renderer: PlantUMLRenderer) -> None:
-        with pytest.raises(RenderingError, match="null bytes"):
+        with pytest.raises(RenderError, match="null bytes"):
             renderer.render("@startuml\x00\nA -> B\n@enduml")
 
     def test_oversized_source_raises(self, renderer: PlantUMLRenderer) -> None:
         big = "A" * (100 * 1024 + 1)
-        with pytest.raises(RenderingError, match="exceeds maximum size"):
+        with pytest.raises(RenderError, match="exceeds maximum size"):
             renderer.render(big)
 
 
@@ -166,18 +167,18 @@ class TestInputValidation:
 class TestOutputValidation:
     def test_empty_output_raises(self, renderer: PlantUMLRenderer) -> None:
         with patch.object(renderer, "_run_plantuml", return_value=""):
-            with pytest.raises(RenderingError, match="empty SVG"):
+            with pytest.raises(RenderError, match="empty SVG"):
                 renderer.render("@startuml\nA -> B\n@enduml")
 
     def test_non_svg_output_raises(self, renderer: PlantUMLRenderer) -> None:
         with patch.object(renderer, "_run_plantuml", return_value="<html></html>"):
-            with pytest.raises(RenderingError, match="valid <svg>"):
+            with pytest.raises(RenderError, match="valid <svg>"):
                 renderer.render("@startuml\nA -> B\n@enduml")
 
     def test_malformed_xml_raises(self, renderer: PlantUMLRenderer) -> None:
         bad_svg = "<svg><unclosed></svg>"
         with patch.object(renderer, "_run_plantuml", return_value=bad_svg):
-            with pytest.raises(RenderingError, match="valid XML"):
+            with pytest.raises(RenderError, match="valid XML"):
                 renderer.render("@startuml\nA -> B\n@enduml")
 
 
@@ -322,7 +323,7 @@ class TestPlantUMLInvocation:
         ):
             mock_run.return_value = _completed(0)
 
-            with pytest.raises(RenderingError, match="did not produce"):
+            with pytest.raises(RenderError, match="did not produce"):
                 renderer.render(source)
 
     def test_plantuml_returns_nonzero(self, renderer: PlantUMLRenderer) -> None:
@@ -335,7 +336,7 @@ class TestPlantUMLInvocation:
         ):
             mock_run.return_value = _completed(1, "Syntax error")
 
-            with pytest.raises(RenderingError, match="Syntax error"):
+            with pytest.raises(RenderError, match="exited with code"):
                 renderer.render("@startuml\ninvalid\n@enduml")
 
     def test_plantuml_times_out(self, renderer: PlantUMLRenderer) -> None:
@@ -346,7 +347,7 @@ class TestPlantUMLInvocation:
             patch("pidraw.engines.plantuml.subprocess.run", side_effect=_timeout),
             patch("pidraw.engines.plantuml.shutil.rmtree"),
         ):
-            with pytest.raises(RenderingError, match="timed out"):
+            with pytest.raises(RenderTimeoutError, match="timed out"):
                 renderer.render("@startuml\nA -> B\n@enduml")
 
     def test_plantuml_binary_missing(self, renderer: PlantUMLRenderer) -> None:
@@ -356,7 +357,7 @@ class TestPlantUMLInvocation:
             patch("pidraw.engines.plantuml.subprocess.run", side_effect=FileNotFoundError),
             patch("pidraw.engines.plantuml.shutil.rmtree"),
         ):
-            with pytest.raises(RenderingError, match="not found"):
+            with pytest.raises(RenderError, match="not found"):
                 renderer.render("@startuml\nA -> B\n@enduml")
 
     def test_cleanup_on_failure(self, renderer: PlantUMLRenderer) -> None:
@@ -368,7 +369,7 @@ class TestPlantUMLInvocation:
             patch("pidraw.engines.plantuml.os.path.isdir", return_value=True),
             patch("pidraw.engines.plantuml.shutil.rmtree") as mock_rmtree,
         ):
-            with pytest.raises(RenderingError):
+            with pytest.raises(RenderTimeoutError):
                 renderer.render("@startuml\nA -> B\n@enduml")
             mock_rmtree.assert_called_once_with("/tmp/pu_test")
 
@@ -412,7 +413,7 @@ class TestAutoRegistration:
         with patch.object(r, "_run_plantuml", return_value=fake_svg):
             from pidraw.renderer import render as public_render
             result = public_render("@startuml\nA -> B\n@enduml")
-            assert result == fake_svg
+            assert result.svg == fake_svg
 
     def test_detection_integration(self) -> None:
         """End-to-end: @startuml source is detected and rendered."""
@@ -433,4 +434,4 @@ class TestAutoRegistration:
                 "@startyaml\nkey: val\n@endyaml",
             ]:
                 result = public_render(source)
-                assert result == fake_svg, f"Failed for: {source[:30]}..."
+                assert result.svg == fake_svg, f"Failed for: {source[:30]}..."

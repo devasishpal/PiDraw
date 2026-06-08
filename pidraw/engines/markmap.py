@@ -9,7 +9,7 @@ import tempfile
 from typing import Optional
 
 from pidraw.engines.base import BaseRenderer
-from pidraw.exceptions import RenderingError
+from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
 
 _MAX_SIZE = 500 * 1024
 _SCRIPT_DIR = os.path.join(os.path.dirname(__file__), "scripts")
@@ -31,21 +31,25 @@ class MarkmapRenderer(BaseRenderer):
         self._script = os.path.join(_SCRIPT_DIR, "markmap_render.js")
 
         if not self._markmap:
-            raise RenderingError(
-                "markmap CLI not found. Install with: npm install -g markmap-cli"
+            raise EngineNotAvailableError(
+                "markmap",
+                setup_command="npm install -g markmap-cli",
             )
         if not self._node:
-            raise RenderingError("Node.js is required for markmap rendering")
+            raise EngineNotAvailableError(
+                "node",
+                setup_command="Install Node.js from https://nodejs.org",
+            )
         if not os.path.isfile(self._script):
-            raise RenderingError(f"markmap render script not found: {self._script}")
+            raise RenderError("markmap", f"markmap render script not found: {self._script}")
 
     def render(self, source: str) -> str:
         if not source or not source.strip():
-            raise RenderingError("Markmap source is empty")
+            raise RenderError("markmap", "Markmap source is empty")
         if "\x00" in source:
-            raise RenderingError("Markmap source contains null bytes")
+            raise RenderError("markmap", "Markmap source contains null bytes")
         if len(source.encode("utf-8")) > _MAX_SIZE:
-            raise RenderingError(f"Markmap source exceeds {_MAX_SIZE // 1024} KB limit")
+            raise RenderError("markmap", f"Markmap source exceeds {_MAX_SIZE // 1024} KB limit")
 
         tmp_dir: Optional[str] = None
         try:
@@ -64,37 +68,38 @@ class MarkmapRenderer(BaseRenderer):
                 timeout=60,
             )
             if result.returncode != 0:
-                raise RenderingError(
+                raise RenderError(
+                    "markmap",
                     f"markmap render failed (code {result.returncode}): "
-                    f"{result.stderr.strip() or result.stdout.strip()}"
+                    f"{result.stderr.strip() or result.stdout.strip()}",
                 )
 
             if not os.path.isfile(output_path):
-                raise RenderingError("markmap render produced no SVG file")
+                raise RenderError("markmap", "markmap render produced no SVG file")
 
             with open(output_path, "r", encoding="utf-8") as f:
                 svg = f.read()
                 svg = svg.lstrip("\ufeff")
 
             if not svg.strip():
-                raise RenderingError("markmap render returned empty SVG")
+                raise RenderError("markmap", "markmap render returned empty SVG")
             if "<svg" not in svg or len(svg) < 500:
-                raise RenderingError("markmap render returned incomplete SVG")
+                raise RenderError("markmap", "markmap render returned incomplete SVG")
 
             import xml.etree.ElementTree as ET
             try:
                 ET.fromstring(svg)
             except ET.ParseError as exc:
-                raise RenderingError(f"markmap returned malformed SVG: {exc}") from exc
+                raise RenderError("markmap", f"markmap returned malformed SVG: {exc}")
 
             return svg
 
         except subprocess.TimeoutExpired:
-            raise RenderingError("markmap render timed out after 60s")
-        except RenderingError:
+            raise RenderTimeoutError("markmap", 60)
+        except RenderError:
             raise
         except Exception as exc:
-            raise RenderingError(f"markmap error: {exc}") from exc
+            raise RenderError("markmap", f"markmap error: {exc}")
         finally:
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh

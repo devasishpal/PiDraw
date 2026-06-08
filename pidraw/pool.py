@@ -1,5 +1,4 @@
 """High-performance parallel rendering pool."""
-
 from __future__ import annotations
 
 import os
@@ -13,7 +12,7 @@ from pidraw.exceptions import PiDrawError
 
 
 @dataclass
-class RenderTask:
+class TaskResult:
     """A single render task submitted to a pool."""
 
     source: str
@@ -23,7 +22,7 @@ class RenderTask:
 
 
 @dataclass
-class RenderResult:
+class PoolRenderResult:
     """Result of a single render task."""
 
     svg: str
@@ -44,7 +43,7 @@ class BatchRenderSummary:
     failed: int = 0
     cached: int = 0
     total_elapsed_ms: float = 0.0
-    results: list[RenderResult] = field(default_factory=list)
+    results: list[PoolRenderResult] = field(default_factory=list)
 
 
 class RenderPool:
@@ -87,7 +86,7 @@ class RenderPool:
         show_progress: bool = False,
         task_id_offset: int = 0,
         file_paths: Iterable[str | None] | None = None,
-    ) -> list[RenderResult]:
+    ) -> list[PoolRenderResult]:
         """Render multiple diagram sources in parallel.
 
         Parameters
@@ -107,7 +106,7 @@ class RenderPool:
 
         Returns
         -------
-        list[RenderResult]
+        list[PoolRenderResult]
             One result per input, in input order.
 
         """
@@ -119,14 +118,14 @@ class RenderPool:
         )
 
         n = len(source_list)
-        results: list[RenderResult | None] = [None] * n
+        results: list[PoolRenderResult | None] = [None] * n
 
         # Check cache first
         if self._cache is not None:
             for i, src in enumerate(source_list):
                 cached_svg = self._cache.get(src, language=language)
                 if cached_svg is not None:
-                    results[i] = RenderResult(
+                    results[i] = PoolRenderResult(
                         svg=cached_svg,
                         task_id=i + task_id_offset,
                         language=language,
@@ -147,7 +146,7 @@ class RenderPool:
         executor_cls = ProcessPoolExecutor if self._use_processes else ThreadPoolExecutor
 
         with executor_cls(max_workers=self._max_workers) as executor:
-            future_map: dict[Future[RenderResult], int] = {}
+            future_map: dict[Future[PoolRenderResult], int] = {}
             for idx in tasks:
                 future = executor.submit(
                     _render_wrapper,
@@ -169,7 +168,7 @@ class RenderPool:
                             source_list[idx], result.svg, language=language
                         )
                 except Exception as exc:
-                    results[idx] = RenderResult(
+                    results[idx] = PoolRenderResult(
                         svg="",
                         task_id=idx + task_id_offset,
                         error=str(exc),
@@ -186,17 +185,17 @@ class RenderPool:
 
     def _finalize_results(
         self,
-        results: list[RenderResult | None],
+        results: list[PoolRenderResult | None],
         sources: list[str],
         language: str | None,
         offset: int,
         file_paths: list[str | None],
-    ) -> list[RenderResult]:
-        finalized: list[RenderResult] = []
+    ) -> list[PoolRenderResult]:
+        finalized: list[PoolRenderResult] = []
         for i, r in enumerate(results):
             if r is None:
                 finalized.append(
-                    RenderResult(
+                    PoolRenderResult(
                         svg="",
                         task_id=i + offset,
                         error="No result produced",
@@ -211,6 +210,7 @@ class RenderPool:
     @staticmethod
     def _print_progress(done: int, total: int) -> None:
         import sys
+
         pct = done / total * 100 if total else 100
         sys.stderr.write(f"\r  [{done}/{total}] {pct:.0f}%")
         if done == total:
@@ -222,16 +222,17 @@ def _render_wrapper(
     language: str | None = None,
     file_path: str | None = None,
     task_id: int = 0,
-) -> RenderResult:
+) -> PoolRenderResult:
     """Standalone wrapper for parallel execution."""
     from pidraw.renderer import render as _render_single
+
     start = time.perf_counter()
     try:
         result = _render_single(source, language=language, format="svg")
-        assert isinstance(result, str), "pool expects SVG string output"
+        svg = result.svg
         elapsed = (time.perf_counter() - start) * 1000
-        return RenderResult(
-            svg=result,
+        return PoolRenderResult(
+            svg=svg,
             task_id=task_id,
             elapsed_ms=elapsed,
             language=language,
@@ -239,7 +240,7 @@ def _render_wrapper(
         )
     except PiDrawError as exc:
         elapsed = (time.perf_counter() - start) * 1000
-        return RenderResult(
+        return PoolRenderResult(
             svg="",
             task_id=task_id,
             elapsed_ms=elapsed,
@@ -249,7 +250,7 @@ def _render_wrapper(
         )
 
 
-def summarize(results: list[RenderResult]) -> BatchRenderSummary:
+def summarize(results: list[PoolRenderResult]) -> BatchRenderSummary:
     """Aggregate a list of render results into a summary."""
     summary = BatchRenderSummary(total=len(results))
     total_elapsed = 0.0

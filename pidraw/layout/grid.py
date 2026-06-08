@@ -36,9 +36,19 @@ class GridLayout(LayoutEngine):
             else:
                 x += node_width + gap_x
 
-        if diagram.viewport is None:
-            max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=800)
-            max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=y + 60)
-            diagram.viewport = Viewport(width=max_x + padding, height=max_y + padding)
+        # Always recompute viewport from actual positions
+        min_x = min((n.position.x for n in nodes if n.position), default=0)
+        min_y = min((n.position.y for n in nodes if n.position), default=0)
+        max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=800)
+        max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=y + 60)
+        cw = max_x - min_x
+        ch = max_y - min_y
+        pad = max(padding * 2, cw * 0.15, ch * 0.15)
+        diagram.viewport = Viewport(
+            x=min_x - pad,
+            y=min_y - pad,
+            width=cw + pad * 2,
+            height=ch + pad * 2,
+        )
 
         return diagram

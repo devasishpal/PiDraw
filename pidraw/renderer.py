@@ -7,11 +7,14 @@ levels, file-based input, and batch rendering.
 from __future__ import annotations
 
 import os
+import time
+import warnings
 from typing import Iterable
 
 from pidraw.detector import detect
-from pidraw.exceptions import UnsupportedLanguageError
+from pidraw.exceptions import LanguageNotSupportedError, UnsupportedLanguageError, RendererNotFoundError
 from pidraw.registry import get_renderer
+from pidraw.result import RenderResult
 
 _RECOGNISED_LEVELS = frozenset({"fast", "balanced", "maximum"})
 _RECOGNISED_FORMATS = frozenset({"svg", "png"})
@@ -25,7 +28,10 @@ def render(
     optimize: str | bool = False,
     quality: bool = False,
     scale: float = 1.0,
-) -> str | bytes:
+    transparent: bool = True,
+    timeout: float = 30.0,
+    theme: str = "light",
+) -> RenderResult:
     """Render a diagram source string into SVG or PNG.
 
     This is the primary entry point for the PiDraw library.  When
@@ -40,8 +46,8 @@ def render(
         Explicit language identifier (e.g. ``"mermaid"``).  When
         ``None`` (default) the language is auto-detected.
     format : str
-        Output format.  ``"svg"`` (default) returns an SVG string.
-        ``"png"`` returns PNG bytes.
+        Output format.  ``"svg"`` (default) returns a RenderResult with SVG.
+        ``"png"`` returns a RenderResult with both SVG and PNG.
     optimize : str or bool
         Optimisation level.  ``False`` (default) = no optimisation.
         ``True`` = ``"balanced"``.  String values: ``"fast"``,
@@ -50,23 +56,29 @@ def render(
         If ``True``, run the quality enhancement pipeline on output.
     scale : float
         Scale factor for PNG output (default 1.0). Ignored for SVG.
+    transparent : bool
+        If True (default), render PNG with transparent background.
+        Ignored for SVG output.
+    timeout : float
+        Maximum render time in seconds.
+    theme : str
+        Theme name to apply to the rendered diagram.
 
     Returns
     -------
-    str or bytes
-        The rendered output: SVG string for ``format="svg"``,
-        PNG bytes for ``format="png"``.
+    RenderResult
+        The rendered output container with `.svg` and optionally `.png`.
 
     Raises
     ------
-    UnsupportedLanguageError
+    LanguageNotSupportedError
         If the language cannot be detected or is not supported.
     RendererNotFoundError
         If the detected/explicit language has no registered renderer.
-    RenderingError
+    RenderError
         If the rendering process itself fails.
-
     """
+    start = time.perf_counter()
     fmt = format.lower()
     if fmt not in _RECOGNISED_FORMATS:
         raise ValueError(f"Unsupported format: {format!r}. Use 'svg' or 'png'.")
@@ -89,13 +101,57 @@ def render(
 
     if quality:
         from pidraw.quality import QualityProcessor
+
         svg = QualityProcessor().process(svg)
+
+    # Build the result
+    elapsed = (time.perf_counter() - start) * 1000.0
+    result = RenderResult(
+        svg=svg,
+        language=lang,
+        engine_used=renderer.name if hasattr(renderer, "name") else "",
+        render_time_ms=elapsed,
+    )
 
     if fmt == "png":
         from pidraw.backend.png import svg_to_png
-        return svg_to_png(svg, scale=scale)
 
-    return svg
+        png_bytes = svg_to_png(svg, scale=scale, transparent=transparent)
+        result.png = png_bytes
+
+    return result
+
+
+def render_svg(
+    source: str,
+    language: str | None = None,
+    *,
+    optimize: str | bool = False,
+    quality: bool = False,
+    **kwargs: object,
+) -> str:
+    """Render a diagram source and return just the SVG string.
+
+    This is a convenience wrapper around :func:`render` that returns
+    a plain string for backwards compatibility.
+
+    .. deprecated::
+        Use :func:`render` instead and access the ``.svg`` attribute
+        of the returned :class:`RenderResult`.
+    """
+    warnings.warn(
+        "render_svg() is deprecated. Use render(source, ...).svg instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    result = render(
+        source,
+        language=language,
+        optimize=optimize,
+        quality=quality,
+        **kwargs,  # type: ignore[arg-type]
+    )
+    return result.svg
 
 
 def render_file(
@@ -106,7 +162,10 @@ def render_file(
     optimize: str | bool = False,
     quality: bool = False,
     scale: float = 1.0,
-) -> str | bytes:
+    transparent: bool = True,
+    timeout: float = 30.0,
+    theme: str = "light",
+) -> RenderResult:
     """Read a diagram file and render it to SVG or PNG.
 
     Parameters
@@ -123,23 +182,26 @@ def render_file(
         If ``True``, run quality enhancement pipeline.
     scale : float
         Scale factor for PNG output (default 1.0). Ignored for SVG.
+    timeout : float
+        Maximum render time in seconds.
+    theme : str
+        Theme name to apply.
 
     Returns
     -------
-    str or bytes
-        The rendered output: SVG string or PNG bytes.
+    RenderResult
+        The rendered output.
 
     Raises
     ------
     FileNotFoundError
         If *path* does not exist.
-    UnsupportedLanguageError
+    LanguageNotSupportedError
         If the language cannot be detected.
     RendererNotFoundError
         If no renderer is registered for the language.
-    RenderingError
+    RenderError
         If the rendering process fails.
-
     """
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Diagram file not found: {path}")
@@ -154,6 +216,9 @@ def render_file(
         optimize=optimize,
         quality=quality,
         scale=scale,
+        transparent=transparent,
+        timeout=timeout,
+        theme=theme,
     )
 
 
@@ -166,7 +231,10 @@ def render_many(
     optimize: str | bool = False,
     quality: bool = False,
     scale: float = 1.0,
-) -> list[str | bytes]:
+    transparent: bool = True,
+    timeout: float = 30.0,
+    theme: str = "light",
+) -> list[RenderResult]:
     """Render multiple diagram sources in parallel.
 
     Parameters
@@ -185,35 +253,44 @@ def render_many(
         If ``True``, run quality enhancement.
     scale :
         Scale factor for PNG output (default 1.0). Ignored for SVG.
+    timeout :
+        Maximum render time in seconds per source.
+    theme :
+        Theme name to apply.
 
     Returns
     -------
-    list[str | bytes]
+    list[RenderResult]
         Rendered outputs, one per input in the same order.
-
     """
     from pidraw.pool import RenderPool
 
     pool = RenderPool(max_workers=max_workers)
-    results = pool.render_many(
-        sources, language=language, show_progress=False
-    )
+    results = pool.render_many(sources, language=language, show_progress=False)
 
-    outputs: list[str | bytes] = []
+    outputs: list[RenderResult] = []
     for r in results:
         if r.error:
-            raise UnsupportedLanguageError(r.error)
+            raise LanguageNotSupportedError(str(r.error))
         svg = r.svg
         if optimize:
             svg = _apply_optimization(svg, optimize)
         if quality:
             from pidraw.quality import QualityProcessor
+
             svg = QualityProcessor().process(svg)
+
+        elapsed = 0.0
+        result = RenderResult(
+            svg=svg,
+            language=language or "",
+            render_time_ms=elapsed,
+        )
         if format == "png":
             from pidraw.backend.png import svg_to_png
-            outputs.append(svg_to_png(svg, scale=scale))
-        else:
-            outputs.append(svg)
+
+            result.png = svg_to_png(svg, scale=scale, transparent=transparent)
+        outputs.append(result)
     return outputs
 
 
@@ -224,6 +301,8 @@ def _apply_optimization(svg: str, level: str | bool) -> str:
         level = "balanced"
     if level in _RECOGNISED_LEVELS:
         from pidraw.optimizer.levels import optimize_by_level
+
         return optimize_by_level(svg, level=level).svg
     from pidraw.optimizer import optimize_svg
+
     return optimize_svg(svg).svg

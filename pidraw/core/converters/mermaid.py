@@ -34,6 +34,8 @@ _EDGE_PATTERN = re.compile(
     r"(?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|\(\([^)]*\)\)|<\[[^\]]*\]>)?\s*"  # optional node shape
     r"((?:[-=.]*[-=>]+|<-[-=.]*|<-|->|<->|==|--)[-\.=]*[-=>]*)"  # arrow
     r"\s*"                               # space
+    r"(?:\|(?:[^|]*)\|)?"               # optional edge label |...|
+    r"\s*"                               # space
     r"(\w[\w\d_]*)"                      # target
     r"(?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|\(\([^)]*\)\)|<\[[^\]]*\]>)?"  # optional node shape
 )
@@ -96,11 +98,12 @@ class MermaidConverter(DiagramConverter):
 
                 # Extract node decorations from the full line
                 for nid, raw in ((src_id, src_id), (tgt_id, tgt_id)):
-                    # Find the actual position of this node in the line
                     idx = line.find(nid)
                     if idx >= 0:
                         remainder = line[idx + len(nid):]
                         shape_type, label_text = self._parse_node_decoration(remainder)
+                        if not label_text:
+                            label_text = nid
                     else:
                         shape_type, label_text = ShapeType.RECTANGLE, nid
 
@@ -194,11 +197,11 @@ class MermaidConverter(DiagramConverter):
         arrow_end = ArrowStyle.TRIANGLE_FILLED
         arrow_start = ArrowStyle.NONE
 
-        if "==" in arrow_str or "===" in arrow_str:
+        if "==" in arrow_str:
             edge_style = EdgeStyle.BOLD
-        elif "-.-" in arrow_str or "-.." in arrow_str:
+        elif "-.->" in arrow_str or "-.." in arrow_str:
             edge_style = EdgeStyle.DOTTED
-        elif "-.-" in arrow_str or ".-" in arrow_str:
+        elif "-.-" in arrow_str:
             edge_style = EdgeStyle.DASHED
 
         if arrow_str.startswith("<->") or arrow_str.startswith("<==>"):
@@ -212,9 +215,6 @@ class MermaidConverter(DiagramConverter):
             arrow_end = ArrowStyle.CIRCLE
         elif arrow_str.endswith("x--"):
             arrow_end = ArrowStyle.BOX
-
-        if "-." in arrow_str and "->" in arrow_str:
-            pass
 
         return edge_style, arrow_start, arrow_end
 
@@ -239,7 +239,7 @@ class MermaidConverter(DiagramConverter):
         if text.startswith(">") and "]" in text:
             end = text.index("]")
             return ShapeType.PARALLELOGRAM, text[1:end]
-        return ShapeType.RECTANGLE, text.split()[0] if text else ""
+        return ShapeType.RECTANGLE, ""
 
     def _ensure_positions(self, diagram: Diagram) -> None:
         nodes = diagram.all_nodes()
@@ -278,11 +278,13 @@ class MermaidConverter(DiagramConverter):
             min_y = min((n.position.y for n in nodes if n.position), default=0)
             max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=800)
             max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=600)
-            pad = layout.padding * 2
+            cw = max_x - min_x
+            ch = max_y - min_y
+            pad = max(layout.padding * 2, cw * 0.15, ch * 0.15)
             from pidraw.core.models import Viewport
             diagram.viewport = Viewport(
                 x=min_x - pad,
                 y=min_y - pad,
-                width=max_x - min_x + pad * 2,
-                height=max_y - min_y + pad * 2,
+                width=cw + pad * 2,
+                height=ch + pad * 2,
             )

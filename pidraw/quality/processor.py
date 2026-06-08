@@ -1,9 +1,3 @@
-"""SVG quality enhancement engine.
-
-Normalises typography, viewBox, text alignment, spacing,
-arrow rendering, and meta-element cleanup for consistent output.
-"""
-
 from __future__ import annotations
 
 import re
@@ -13,28 +7,14 @@ _SVG_NS = "http://www.w3.org/2000/svg"
 
 _XML_DECL_RE = re.compile(r"^<\?xml[^>]*>\s*", re.IGNORECASE)
 
+_WEB_SAFE_FONTS: dict[str, str] = {
+    "sans-serif": "Arial, Helvetica, sans-serif",
+    "serif": "Georgia, 'Times New Roman', serif",
+    "monospace": "'Courier New', Courier, monospace",
+}
+
 
 class QualityProcessor:
-    """Enhance SVG rendering quality and consistency.
-
-    Applies a series of normalisation passes that improve visual
-    appearance without changing the semantic content.
-
-    Parameters
-    ----------
-    normalize_viewbox : bool
-        Ensure a well-formed ``viewBox`` attribute exists.
-    fix_text_alignment : bool
-        Add ``dominant-baseline`` and ``text-anchor`` to text elements.
-    fix_arrow_heads : bool
-        Normalise marker definitions for consistent arrow rendering.
-    clean_spacing : bool
-        Remove spurious whitespace and empty ``<g>`` wrappers.
-    sharpen_paths : bool
-        Round path coordinates to reduce noise.
-
-    """
-
     def __init__(
         self,
         normalize_viewbox: bool = True,
@@ -42,15 +22,20 @@ class QualityProcessor:
         fix_arrow_heads: bool = True,
         clean_spacing: bool = True,
         sharp_paths: bool = True,
+        normalize_fonts: bool = True,
+        normalize_strokes: bool = True,
+        dedup_markers: bool = True,
     ) -> None:
         self._normalize_viewbox = normalize_viewbox
         self._fix_text_alignment = fix_text_alignment
         self._fix_arrow_heads = fix_arrow_heads
         self._clean_spacing = clean_spacing
         self._sharp_paths = sharp_paths
+        self._normalize_fonts = normalize_fonts
+        self._normalize_strokes = normalize_strokes
+        self._dedup_markers = dedup_markers
 
     def process(self, svg: str) -> str:
-        """Run the quality pipeline on an SVG string."""
         svg = _strip_xml_declaration(svg)
         root = _parse(svg)
 
@@ -64,16 +49,17 @@ class QualityProcessor:
             self._apply_spacing_cleanup(root)
         if self._sharp_paths:
             self._apply_path_sharpening(root)
+        if self._normalize_fonts:
+            self._apply_font_normalization(root)
+        if self._normalize_strokes:
+            self._apply_stroke_normalization(root)
+        if self._dedup_markers:
+            self._apply_marker_dedup(root)
 
         return _serialize(root)
 
-    # ------------------------------------------------------------------
-    # viewBox
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _apply_viewbox(root: Element) -> None:
-        """Ensure root ``<svg>`` has a well-formed viewBox."""
         vb = root.get("viewBox")
         if vb:
             parts = re.split(r"[\s,]+", vb.strip())
@@ -91,15 +77,10 @@ class QualityProcessor:
             except (ValueError, TypeError):
                 pass
 
-    # ------------------------------------------------------------------
-    # Text alignment
-    # ------------------------------------------------------------------
-
     _TEXT_TAGS = frozenset({"text", "tspan", "textPath"})
 
     @classmethod
     def _apply_text_alignment(cls, root: Element) -> None:
-        """Add consistent text alignment attributes."""
         for elem in root.iter():
             tag = _local_name(elem.tag)
             if tag in cls._TEXT_TAGS:
@@ -108,25 +89,15 @@ class QualityProcessor:
                         elem.set("dominant-baseline", "central")
                         elem.set("text-anchor", "middle")
 
-    # ------------------------------------------------------------------
-    # Arrow heads
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _apply_arrow_normalization(root: Element) -> None:
-        """Normalise marker definitions for consistent arrow rendering."""
-        for marker in root.iter("{http://www.w3.org/2000/svg}marker"):
+        for marker in root.iter(f"{{{_SVG_NS}}}marker"):
             orient = marker.get("orient", "auto")
             if orient not in ("auto", "auto-start-reverse"):
                 marker.set("orient", "auto")
 
-    # ------------------------------------------------------------------
-    # Spacing cleanup
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _apply_spacing_cleanup(root: Element) -> None:
-        """Remove redundant empty groups and whitespace-only text nodes."""
         parent_map = {c: p for p in root.iter() for c in p}
 
         changed = True
@@ -142,15 +113,10 @@ class QualityProcessor:
                         parent.remove(elem)
                         changed = True
 
-    # ------------------------------------------------------------------
-    # Path sharpening
-    # ------------------------------------------------------------------
-
     _PATH_RE = re.compile(r"(-?\d+\.?\d*)")
 
     @classmethod
     def _apply_path_sharpening(cls, root: Element) -> None:
-        """Round path data coordinates to 1 decimal place."""
         for elem in root.iter():
             tag = _local_name(elem.tag)
             d = elem.get("d", "")
@@ -170,12 +136,60 @@ class QualityProcessor:
                 return f"{n:.1f}"
             except ValueError:
                 return m.group(1)
+
         return cls._PATH_RE.sub(_round, d)
 
+    @staticmethod
+    def _apply_font_normalization(root: Element) -> None:
+        for elem in root.iter():
+            tag = _local_name(elem.tag)
+            if tag in ("text", "tspan", "textPath"):
+                ff = elem.get("font-family", "")
+                if ff and ff in _WEB_SAFE_FONTS:
+                    elem.set("font-family", _WEB_SAFE_FONTS[ff])
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+    @staticmethod
+    def _apply_stroke_normalization(root: Element) -> None:
+        for elem in root.iter():
+            sw = elem.get("stroke-width", "")
+            if sw:
+                try:
+                    val = float(sw)
+                    if val <= 0:
+                        elem.set("stroke-width", "1")
+                except ValueError:
+                    pass
+            elem.attrib.pop("stroke-dashoffset", None)
+
+    @staticmethod
+    def _apply_marker_dedup(root: Element) -> None:
+        markers: dict[str, str] = {}
+        to_remove: list[Element] = []
+
+        for marker in root.iter(f"{{{_SVG_NS}}}marker"):
+            mid = marker.get("id", "")
+            if not mid:
+                continue
+            marker_xml = tostring(marker, encoding="unicode")
+            if marker_xml in markers:
+                existing_id = markers[marker_xml]
+                to_remove.append(marker)
+                marker.set("id", existing_id)
+            else:
+                markers[marker_xml] = mid
+
+        parent_map = {c: p for p in root.iter() for c in p}
+        for marker in to_remove:
+            parent = parent_map.get(marker)
+            if parent is not None:
+                parent.remove(marker)
+            dup_id = marker.get("id", "")
+            if dup_id:
+                for elem in root.iter():
+                    for attr in ("marker-start", "marker-mid", "marker-end"):
+                        val = elem.get(attr, "")
+                        if val and dup_id in val:
+                            elem.set(attr, val)
 
 
 def _local_name(tag: str) -> str:
@@ -200,7 +214,6 @@ def _strip_xml_declaration(svg: str) -> str:
 
 
 def _parse_length(value: str) -> float:
-    """Parse an SVG length value, stripping units."""
     value = value.strip()
     match = re.match(r"([+-]?\d+\.?\d*)(px|pt|em|ex|cm|mm|in|%)?", value)
     if match:
@@ -208,28 +221,27 @@ def _parse_length(value: str) -> float:
     raise ValueError(f"Cannot parse length: {value!r}")
 
 
-# ---------------------------------------------------------------------------
-# Preset configurations
-# ---------------------------------------------------------------------------
-
-
 def default_quality() -> QualityProcessor:
-    """Return a ``QualityProcessor`` with all enhancements enabled."""
     return QualityProcessor(
         normalize_viewbox=True,
         fix_text_alignment=True,
         fix_arrow_heads=True,
         clean_spacing=True,
         sharp_paths=True,
+        normalize_fonts=True,
+        normalize_strokes=True,
+        dedup_markers=True,
     )
 
 
 def minimal_quality() -> QualityProcessor:
-    """Return a ``QualityProcessor`` with only viewBox normalisation."""
     return QualityProcessor(
         normalize_viewbox=True,
         fix_text_alignment=False,
         fix_arrow_heads=False,
         clean_spacing=False,
         sharp_paths=False,
+        normalize_fonts=False,
+        normalize_strokes=False,
+        dedup_markers=False,
     )

@@ -56,9 +56,19 @@ class TreeLayout(LayoutEngine):
             if n.position is None:
                 n.position = Position(padding, padding)
 
-        if diagram.viewport is None:
-            max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=right + padding)
-            max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=400)
-            diagram.viewport = Viewport(width=max_x + padding, height=max_y + padding)
+        # Always recompute viewport from actual positions
+        min_x = min((n.position.x for n in nodes if n.position), default=0)
+        min_y = min((n.position.y for n in nodes if n.position), default=0)
+        max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=right + padding)
+        max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=400)
+        cw = max_x - min_x
+        ch = max_y - min_y
+        pad = max(padding * 2, cw * 0.15, ch * 0.15)
+        diagram.viewport = Viewport(
+            x=min_x - pad,
+            y=min_y - pad,
+            width=cw + pad * 2,
+            height=ch + pad * 2,
+        )
 
         return diagram
