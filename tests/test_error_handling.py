@@ -13,10 +13,10 @@ from pidraw.exceptions import (
     ParseError,
     PiDrawError,
     PngConversionError,
-    RenderError,
-    RenderTimeoutError,
     RendererNotFoundError,
+    RenderError,
     RenderingError,
+    RenderTimeoutError,
     UnsupportedLanguageError,
 )
 from pidraw.registry import clear_registry, register_renderer

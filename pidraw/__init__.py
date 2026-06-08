@@ -65,10 +65,10 @@ from pidraw.exceptions import (
     PluginError,
     PngConversionError,
     RecoverableRenderingError,
-    RenderError,
-    RenderTimeoutError,
     RendererNotFoundError,
+    RenderError,
     RenderingError,
+    RenderTimeoutError,
     UnsupportedLanguageError,
 )
 from pidraw.formats import FormatInfo, format_table, list_formats
@@ -85,7 +85,6 @@ from pidraw.optimizer import (
 from pidraw.pipeline import ExportPipeline, render_native, render_native_from_diagram
 from pidraw.pool import RenderPool
 from pidraw.quality import QualityProcessor
-from pidraw.recovery import RecoverableRenderingError
 from pidraw.registry import (
     clear_registry,
     discover_plugins,

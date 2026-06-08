@@ -6,7 +6,7 @@ the synchronous ``render`` / ``render_file`` functions.
 
 from __future__ import annotations
 
-from pidraw.renderer import render, render_file
+from pidraw.renderer import render
 from pidraw.result import RenderResult
 
 

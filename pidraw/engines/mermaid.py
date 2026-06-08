@@ -173,8 +173,8 @@ class MermaidRenderer(BaseRenderer):
 
     def _run_native(self, source: str) -> str:
         """Fallback native renderer for basic diagram types when mmdc is absent."""
-        from pidraw.core.converters import get_converter
         from pidraw.backend.svg import SvgBackend
+        from pidraw.core.converters import get_converter
         from pidraw.layout import apply_layout
 
         converter = get_converter("mermaid")

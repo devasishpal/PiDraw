@@ -8,7 +8,7 @@ import urllib.parse
 import urllib.request
 
 from pidraw.engines.base import BaseRenderer
-from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
+from pidraw.exceptions import EngineNotAvailableError, RenderError
 
 _MAX_SIZE = 100 * 1024
 _DEFAULT_ENDPOINT = "https://kroki.io"
@@ -78,7 +78,7 @@ class KrokiRenderer(BaseRenderer):
             raise RenderError(
                 "kroki", f"Kroki HTTP {exc.code}: {body}"
             )
-        except urllib.error.URLError as exc:
+        except urllib.error.URLError:
             raise EngineNotAvailableError(
                 "kroki",
                 setup_command="Check network access to kroki.io",

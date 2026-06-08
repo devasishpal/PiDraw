@@ -8,8 +8,8 @@ from unittest.mock import patch
 import pytest
 
 from pidraw.async_api import arender, arender_file
-from pidraw.registry import clear_registry, register_renderer
 from pidraw.engines.mermaid import MermaidRenderer
+from pidraw.registry import clear_registry, register_renderer
 
 
 @pytest.fixture(autouse=True)

@@ -1,7 +1,6 @@
 """Tests for RenderResult dataclass."""
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from pidraw.result import RenderResult

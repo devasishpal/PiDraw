@@ -1,16 +1,17 @@
 """Tests for PNG output pipeline."""
 from __future__ import annotations
 
+from importlib import util as importlib_util
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from pidraw.backend.png import (
-    strip_svg_background,
-    trim_png,
-    svg_to_png,
     _render_cairosvg,
     _render_playwright,
+    strip_svg_background,
+    svg_to_png,
+    trim_png,
 )
 from pidraw.exceptions import PngConversionError
 
@@ -88,6 +89,10 @@ class TestCairosvgBackend:
 
 
 class TestPlaywrightBackend:
+    @pytest.mark.skipif(
+        not importlib_util.find_spec("playwright"),
+        reason="playwright not installed",
+    )
     def test_calls_playwright(self) -> None:
         mock_page = MagicMock()
         mock_page.screenshot.return_value = b"PNG"

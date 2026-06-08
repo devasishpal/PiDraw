@@ -159,13 +159,13 @@ def _add_image_to_paragraph(paragraph, stream) -> None:
     orig_w, orig_h = img.size
     stream.seek(0)
 
-    PAGE_W = 6.0
-    MAX_H = 7.5
+    page_w = 6.0
+    max_h = 7.5
 
-    if orig_w / orig_h > PAGE_W / MAX_H:
-        paragraph.add_run().add_picture(stream, width=Inches(PAGE_W))
+    if orig_w / orig_h > page_w / max_h:
+        paragraph.add_run().add_picture(stream, width=Inches(page_w))
     else:
-        paragraph.add_run().add_picture(stream, height=Inches(MAX_H))
+        paragraph.add_run().add_picture(stream, height=Inches(max_h))
 
     paragraph.paragraph_format.space_after = Inches(0.15)
 
@@ -176,10 +176,11 @@ def to_docx(
     fmt: str = "png",
     title: str = "PiDraw Document",
 ) -> bytes:
-    from docx import Document
-    from docx.shared import Inches, Pt, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
     from io import BytesIO
+
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt, RGBColor
 
     doc = Document()
 

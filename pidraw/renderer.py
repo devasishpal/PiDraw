@@ -12,7 +12,10 @@ import warnings
 from typing import Iterable
 
 from pidraw.detector import detect
-from pidraw.exceptions import LanguageNotSupportedError, UnsupportedLanguageError, RendererNotFoundError
+from pidraw.exceptions import (
+    LanguageNotSupportedError,
+    UnsupportedLanguageError,
+)
 from pidraw.registry import get_renderer
 from pidraw.result import RenderResult
 
