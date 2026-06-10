@@ -73,11 +73,18 @@ class PlantUMLRenderer(BaseRenderer):
         java_path: Optional[str] = None,
         jar_path: Optional[str] = None,
     ) -> None:
-        self._cmd: List[str] = self._resolve_command(plantuml_path, java_path, jar_path)
+        self._cmd: Optional[List[str]] = None
+        try:
+            self._cmd = self._resolve_command(plantuml_path, java_path, jar_path)
+        except EngineNotAvailableError:
+            pass
 
     def render(self, source: str) -> str:
         self._validate_source(source)
-        svg = self._run_plantuml(source)
+        if self._cmd is not None:
+            svg = self._run_plantuml(source)
+        else:
+            svg = self._run_native(source)
         self._validate_output(svg)
         return svg
 
@@ -106,6 +113,30 @@ class PlantUMLRenderer(BaseRenderer):
             "plantuml",
             setup_command="pip install pidraw[plantuml] or install plantuml JAR from https://plantuml.com/download",
         )
+
+    def _run_native(self, source: str) -> str:
+        """Fallback native renderer when PlantUML CLI is absent or fails."""
+        from pidraw.backend.svg import SvgBackend
+        from pidraw.core.converters import get_converter
+        from pidraw.layout import apply_layout
+
+        converter = get_converter("plantuml")
+        if converter is None:
+            raise EngineNotAvailableError(
+                "plantuml (native)",
+                setup_command="Install PlantUML from https://plantuml.com/download",
+            )
+        try:
+            diagram = converter.parse(source)
+        except Exception as exc:
+            raise RenderError("plantuml", f"Native converter failed: {exc}")
+        diagram = apply_layout(diagram)
+        backend = SvgBackend()
+        try:
+            svg = backend.render(diagram)
+        except Exception as exc:
+            raise RenderError("plantuml", f"SvgBackend failed: {exc}")
+        return svg
 
     @staticmethod
     def _validate_source(source: str) -> None:

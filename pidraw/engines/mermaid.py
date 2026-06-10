@@ -1,4 +1,4 @@
-"""Mermaid diagram renderer powered by the Mermaid CLI (``mmdc``)."""
+"""Mermaid diagram renderer with native fallback then mmdc CLI fallback."""
 from __future__ import annotations
 
 import os
@@ -15,13 +15,19 @@ _MAX_INPUT_SIZE = 100 * 1024
 _RENDER_TIMEOUT = 30
 _SVG_ROOT_RE = re.compile(r"<\s*svg[\s>]", re.IGNORECASE)
 
+_EMPTY_SVG_RE = re.compile(
+    r"<g\s+id\s*=\s*[\"']nodes[\"']\s*/?\s*>", re.IGNORECASE
+)
+
 # Diagram types natively supported by the converter
 _NATIVE_DIAGRAM_TYPES = {
     "flowchart",
     "graph",
-    "sequenceDiagram",
-    "classDiagram",
-    "erDiagram",
+    "sequencediagram",
+    "classdiagram",
+    "statediagram",
+    "statediagram-v2",
+    "erdiagram",
     "pie",
     "gantt",
 }
@@ -29,15 +35,14 @@ _NATIVE_DIAGRAM_TYPES = {
 # Diagram types that REQUIRE mmdc CLI
 _CLI_ONLY_DIAGRAM_TYPES = {
     "gitgraph",
-    "quadrantChart",
+    "quadrantchart",
     "xychart",
     "timeline",
     "journey",
     "mindmap",
     "zenuml",
     "sankey",
-    "requirementDiagram",
-    "stateDiagram-v2",
+    "requirementdiagram",
 }
 
 _DIAGRAM_TYPE_RE = re.compile(
@@ -49,43 +54,71 @@ _DIAGRAM_TYPE_RE = re.compile(
 
 
 class MermaidRenderer(BaseRenderer):
-    """Render Mermaid diagram source to SVG via the Mermaid CLI."""
+    """Render Mermaid diagram source to SVG via native converter or mmdc CLI."""
 
     name = "mermaid"
-    _has_native_fallback: bool = False
+    _has_mmdc: bool = False
 
     def __init__(self, mmdc_path: Optional[str] = None) -> None:
         self._mmdc_path: Optional[str] = None
         try:
             self._mmdc_path = mmdc_path or self._find_mmdc()
+            self._has_mmdc = True
         except EngineNotAvailableError:
             self._mmdc_path = None
-            self._has_native_fallback = True
 
     def render(self, source: str) -> str:
         self._validate_source(source)
 
-        # Detect diagram type for unsupported types without CLI
-        if self._mmdc_path is None and self._has_native_fallback:
-            type_match = _DIAGRAM_TYPE_RE.search(source)
-            if type_match:
-                diagram_type = type_match.group(1)
-                if diagram_type in _CLI_ONLY_DIAGRAM_TYPES or (
-                    diagram_type not in _NATIVE_DIAGRAM_TYPES
-                ):
-                    raise RenderError(
-                        "mermaid",
-                        f"Diagram type {diagram_type!r} requires mmdc CLI. "
-                        "Install with: npm install -g @mermaid-js/mermaid-cli",
-                    )
+        type_match = _DIAGRAM_TYPE_RE.search(source)
+        diagram_type = type_match.group(1) if type_match else ""
+        dt_lower = diagram_type.lower()
 
-        if self._mmdc_path is not None:
-            svg = self._run_mmdc(source)
-        else:
-            svg = self._run_native(source)
+        # If type requires CLI and we don't have it, error
+        if not self._has_mmdc and dt_lower in _CLI_ONLY_DIAGRAM_TYPES:
+            raise RenderError(
+                "mermaid",
+                f"Diagram type {diagram_type!r} requires mmdc CLI. "
+                "Install with: npm install -g @mermaid-js/mermaid-cli",
+            )
 
+        # Types not in NATIVE and not in CLI_ONLY — unknown
+        if (
+            dt_lower not in _NATIVE_DIAGRAM_TYPES
+            and dt_lower not in _CLI_ONLY_DIAGRAM_TYPES
+        ):
+            if self._has_mmdc:
+                svg = self._run_mmdc(source)
+                self._validate_output(svg)
+                return svg
+            raise RenderError(
+                "mermaid",
+                f"Unknown diagram type {diagram_type!r}. "
+                "Neither native renderer nor mmdc CLI can handle it.",
+            )
+
+        # Always try native first (no deps, fast)
+        svg = self._run_native(source)
         self._validate_output(svg)
+
+        # Check if native output is substantively empty
+        if self._is_empty_svg(svg) and self._has_mmdc:
+            try:
+                mmdc_svg = self._run_mmdc(source)
+                self._validate_output(mmdc_svg)
+                svg = mmdc_svg
+            except (RenderError, RenderTimeoutError):
+                pass
+
         return svg
+
+    @staticmethod
+    def _is_empty_svg(svg: str) -> bool:
+        """Detect if SVG has no visible content (empty nodes/edges)."""
+        m = _EMPTY_SVG_RE.search(svg)
+        if m:
+            return True
+        return len(svg) < 200
 
     @staticmethod
     def _find_mmdc() -> str:
@@ -172,7 +205,6 @@ class MermaidRenderer(BaseRenderer):
             )
 
     def _run_native(self, source: str) -> str:
-        """Fallback native renderer for basic diagram types when mmdc is absent."""
         from pidraw.backend.svg import SvgBackend
         from pidraw.core.converters import get_converter
         from pidraw.layout import apply_layout

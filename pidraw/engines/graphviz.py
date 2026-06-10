@@ -31,11 +31,18 @@ class GraphvizRenderer(BaseRenderer):
     name = "graphviz"
 
     def __init__(self, dot_path: Optional[str] = None) -> None:
-        self._dot_path = dot_path or self._find_dot()
+        self._dot_path: Optional[str] = None
+        try:
+            self._dot_path = dot_path or self._find_dot()
+        except EngineNotAvailableError:
+            pass
 
     def render(self, source: str) -> str:
         self._validate_source(source)
-        svg = self._run_dot(source)
+        if self._dot_path is not None:
+            svg = self._run_dot(source)
+        else:
+            svg = self._run_native(source)
         self._validate_output(svg)
         return svg
 
@@ -74,6 +81,30 @@ class GraphvizRenderer(BaseRenderer):
             ET.fromstring(svg)
         except ET.ParseError as exc:
             raise RenderError("graphviz", f"Graphviz dot output is not valid XML: {exc}")
+
+    def _run_native(self, source: str) -> str:
+        """Fallback native renderer when dot CLI is absent or fails."""
+        from pidraw.backend.svg import SvgBackend
+        from pidraw.core.converters import get_converter
+        from pidraw.layout import apply_layout
+
+        converter = get_converter("graphviz")
+        if converter is None:
+            raise EngineNotAvailableError(
+                "graphviz (native)",
+                setup_command="Install Graphviz from https://graphviz.org/download/",
+            )
+        try:
+            diagram = converter.parse(source)
+        except Exception as exc:
+            raise RenderError("graphviz", f"Native converter failed: {exc}")
+        diagram = apply_layout(diagram)
+        backend = SvgBackend()
+        try:
+            svg = backend.render(diagram)
+        except Exception as exc:
+            raise RenderError("graphviz", f"SvgBackend failed: {exc}")
+        return svg
 
     def _run_dot(self, source: str) -> str:
         cmd = [self._dot_path, "-Tsvg"]

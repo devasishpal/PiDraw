@@ -1,4 +1,4 @@
-"""Renderer for Markmap mindmap diagrams via headless Chromium."""
+"""Renderer for Markmap mindmap diagrams — tries CLI first, falls back to native."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 from typing import Optional
 
+from pidraw.core.converters import get_converter
 from pidraw.engines.base import BaseRenderer
 from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
 
@@ -18,8 +19,9 @@ _SCRIPT_DIR = os.path.join(os.path.dirname(__file__), "scripts")
 class MarkmapRenderer(BaseRenderer):
     """Render Markdown mindmap source to SVG.
 
-    Uses the ``markmap`` CLI to generate offline HTML, then extracts
-    the rendered SVG via headless Chromium (Playwright).
+    Tries ``markmap`` CLI (npm) + headless Chromium first; falls back
+    to the native Python parser + TreeLayout + SvgBackend pipeline
+    if the CLI is not available or fails.
     """
 
     name = "markmap"
@@ -29,6 +31,7 @@ class MarkmapRenderer(BaseRenderer):
         self._markmap: str | None = path or shutil.which("markmap")
         self._node: str | None = shutil.which("node")
         self._script = os.path.join(_SCRIPT_DIR, "markmap_render.js")
+        self._native = None
 
         if not self._markmap:
             raise EngineNotAvailableError(
@@ -51,6 +54,15 @@ class MarkmapRenderer(BaseRenderer):
         if len(source.encode("utf-8")) > _MAX_SIZE:
             raise RenderError("markmap", f"Markmap source exceeds {_MAX_SIZE // 1024} KB limit")
 
+        if self._markmap and self._node:
+            try:
+                return self._render_via_cli(source)
+            except (RenderError, subprocess.SubprocessError, OSError):
+                pass
+
+        return self._render_native(source)
+
+    def _render_via_cli(self, source: str) -> str:
         tmp_dir: Optional[str] = None
         try:
             tmp_dir = tempfile.mkdtemp(prefix="pidraw_markmap_")
@@ -104,3 +116,11 @@ class MarkmapRenderer(BaseRenderer):
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh
                 sh.rmtree(tmp_dir, ignore_errors=True)
+
+    def _render_native(self, source: str) -> str:
+        converter = get_converter("markmap")
+        if converter is None:
+            raise RenderError("markmap", "Native Markmap converter not available")
+        from pidraw.engines.native import NativeRenderer
+        native = NativeRenderer("markmap")
+        return native.render(source)

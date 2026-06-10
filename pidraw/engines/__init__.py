@@ -17,6 +17,7 @@ from pidraw.engines.tikz import TikzRenderer
 from pidraw.engines.vega import VegaRenderer
 from pidraw.engines.vega_lite import VegaLiteRenderer
 from pidraw.engines.wavedrom import WaveDromRenderer
+from pidraw.engines.wavedrom_native import WaveDromNativeRenderer
 from pidraw.exceptions import (
     EngineNotAvailableError,
     PiDrawError,
@@ -31,8 +32,8 @@ _REGISTRATIONS: list[tuple[str, type[BaseRenderer], tuple[object, ...]]] = [
     ("plantuml", PlantUMLRenderer, ()),
     ("d2", D2Renderer, ()),
     ("bpmn", BPMNRenderer, ()),
-    ("markmap", MarkmapRenderer, ()),
-    ("nomnoml", NomnomlRenderer, ()),
+    ("markmap", NativeRenderer, ("markmap",)),
+    ("nomnoml", NativeRenderer, ("nomnoml",)),
     ("wavedrom", WaveDromRenderer, ()),
     ("structurizr", StructurizrRenderer, ()),
     ("vega", VegaRenderer, ()),
@@ -102,6 +103,7 @@ __all__ = [
     "NativeRenderer",
     "NomnomlRenderer",
     "WaveDromRenderer",
+    "WaveDromNativeRenderer",
     "StructurizrRenderer",
     "VegaRenderer",
     "VegaLiteRenderer",

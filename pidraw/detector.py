@@ -48,10 +48,14 @@ _DETECTION_RULES: list[tuple[re.Pattern[str], DiagramLanguage, float]] = [
     # --- TikZ ---
     (re.compile(r"\\begin\{tikzpicture\}"), DiagramLanguage.TIKZ, 0.98),
     (re.compile(r"\\tikz"), DiagramLanguage.TIKZ, 0.92),
+    (re.compile(r"\\node\["), DiagramLanguage.TIKZ, 0.85),
+    (re.compile(r"\\draw\["), DiagramLanguage.TIKZ, 0.85),
     # --- BPMN (XML/JSON schema) ---
-    (re.compile(r"xmlns:bpmn=["r"']http://www\.omg\.org/spec/BPMN"), DiagramLanguage.BPMN, 0.99),
+    (re.compile(r'xmlns:bpmn=["\']http://www\.omg\.org/spec/BPMN'), DiagramLanguage.BPMN, 0.99),
     (re.compile(r"bpmn:definitions"), DiagramLanguage.BPMN, 0.98),
     (re.compile(r"bpmn:process"), DiagramLanguage.BPMN, 0.97),
+    (re.compile(r'xmlns=["\']http://www\.omg\.org/spec/BPMN'), DiagramLanguage.BPMN, 0.95),
+    (re.compile(r"definitions.*targetNamespace.*omg"), DiagramLanguage.BPMN, 0.90),
     # --- Structurizr DSL ---
     (re.compile(r"^workspace\s*\{", re.MULTILINE), DiagramLanguage.STRUCTURIZR, 0.97),
     (re.compile(r"^\s*model\s*\{", re.MULTILINE), DiagramLanguage.STRUCTURIZR, 0.95),
@@ -64,6 +68,7 @@ _DETECTION_RULES: list[tuple[re.Pattern[str], DiagramLanguage, float]] = [
     (re.compile(r'"mark"\s*:\s*"[a-z]+"'), DiagramLanguage.VEGA_LITE, 0.85),
     # --- WaveDrom ---
     (re.compile(r'\{\s*"signal"\s*:\s*\['), DiagramLanguage.WAVEDROM, 0.97),
+    (re.compile(r'\{\s*signal\s*:\s*\['), DiagramLanguage.WAVEDROM, 0.96),
     (re.compile(r'"wave":\s*["\']'), DiagramLanguage.WAVEDROM, 0.96),
     # --- Excalidraw ---
     (re.compile(r'"type"\s*:\s*"excalidraw"'), DiagramLanguage.EXCALIDRAW, 0.98),
@@ -73,6 +78,7 @@ _DETECTION_RULES: list[tuple[re.Pattern[str], DiagramLanguage, float]] = [
     # --- Nomnoml ---
     (re.compile(r"^#[\w:]+\s*:", re.MULTILINE), DiagramLanguage.NOMNOML, 0.90),
     (re.compile(r"^\[<[^>]+>\]", re.MULTILINE), DiagramLanguage.NOMNOML, 0.88),
+    (re.compile(r"^\[[\w]+\]", re.MULTILINE), DiagramLanguage.NOMNOML, 0.80),
     # --- ASCII art ---
     (re.compile(r"^\s*\+--\+", re.MULTILINE), DiagramLanguage.ASCII, 0.65),
     (re.compile(r"^\s*\.-\.", re.MULTILINE), DiagramLanguage.ASCII, 0.60),

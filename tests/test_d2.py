@@ -37,8 +37,8 @@ class TestFindD2:
 class TestConstruction:
     def test_find_d2_raises_when_missing(self) -> None:
         with patch("pidraw.engines.d2.shutil.which", return_value=None):
-            with pytest.raises(EngineNotAvailableError):
-                D2Renderer()
+            r = D2Renderer()
+            assert r._d2_path is None  # falls back to native
 
     def test_explicit_path_used(self) -> None:
         r = D2Renderer(d2_path="/custom/d2")

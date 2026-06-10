@@ -20,12 +20,20 @@ class VegaRenderer(BaseRenderer):
 
     def __init__(self, path: str | None = None) -> None:
         self._path = path
-        self._resolved: str | None = path or self._find_vg2svg()
-        if not self._resolved:
-            raise EngineNotAvailableError(
-                "vg2svg",
-                setup_command="npm install -g vega-cli",
-            )
+        self._resolved: str | None = None
+        self._vl_convert = None
+        try:
+            import vl_convert as _vlc
+            self._vl_convert = _vlc
+        except ImportError:
+            pass
+        if not self._vl_convert:
+            self._resolved = path or self._find_vg2svg()
+            if not self._resolved:
+                raise EngineNotAvailableError(
+                    "vg2svg",
+                    setup_command="pip install vl-convert-python  OR  npm install -g vega-cli",
+                )
 
     @staticmethod
     def _find_vg2svg() -> str | None:
@@ -39,6 +47,32 @@ class VegaRenderer(BaseRenderer):
         if len(source.encode("utf-8")) > _MAX_SIZE:
             raise RenderError("vega", f"Vega source exceeds {_MAX_SIZE // 1024} KB limit")
 
+        if self._resolved is not None:
+            return self._render_via_cli(source)
+        return self._render_via_python(source)
+
+    def _render_via_python(self, source: str) -> str:
+        assert self._vl_convert is not None
+        try:
+            import json
+            spec = json.loads(source)
+            svg = str(self._vl_convert.vega_to_svg(spec))
+            if not svg or "<svg" not in svg:
+                raise RenderError("vega", "vl-convert returned invalid SVG")
+            import xml.etree.ElementTree as ET
+            try:
+                ET.fromstring(svg)
+            except ET.ParseError as exc:
+                raise RenderError("vega", f"vl-convert returned malformed XML: {exc}")
+            return svg
+        except json.JSONDecodeError as exc:
+            raise RenderError("vega", f"Vega source is not valid JSON: {exc}")
+        except RenderError:
+            raise
+        except Exception as exc:
+            raise RenderError("vega", f"vl-convert failed: {exc}")
+
+    def _render_via_cli(self, source: str) -> str:
         tmp_dir: Optional[str] = None
         try:
             tmp_dir = tempfile.mkdtemp(prefix="pidraw_vega_")

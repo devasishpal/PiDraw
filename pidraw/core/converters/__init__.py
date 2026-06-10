@@ -6,8 +6,12 @@ from pidraw.core.converters.ascii import ASCIIConverter
 from pidraw.core.converters.base import DiagramConverter, converter_registry
 from pidraw.core.converters.d2 import D2Converter
 from pidraw.core.converters.graphviz import GraphvizConverter
+from pidraw.core.converters.markmap import MarkmapConverter
 from pidraw.core.converters.mermaid import MermaidConverter
+from pidraw.core.converters.nomnoml import NomnomlConverter
 from pidraw.core.converters.plantuml import PlantUMLConverter
+from pidraw.core.converters.structurizr import StructurizrConverter
+from pidraw.core.converters.tikz import TikzConverter
 from pidraw.core.models import Diagram
 
 
@@ -34,6 +38,9 @@ __all__ = [
     "GraphvizConverter",
     "D2Converter",
     "ASCIIConverter",
+    "NomnomlConverter",
+    "MarkmapConverter",
+    "StructurizrConverter",
     "get_converter",
     "convert",
     "list_converters",

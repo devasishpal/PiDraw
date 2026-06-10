@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0 (2026-06-10)
+
+### Added
+- **TikZ native renderer** (`core/converters/tikz.py`) — pure Python TikZ-to-SVG converter. Handles `\node`, `\draw`, `\path`, `\scope`, `matrix of nodes`, basic shapes (rectangle, circle, ellipse, diamond), arrow types, colors, dash styles, font sizes. Previously required `pdflatex` + `pdf2svg`.
+- **Mermaid native support expanded** — added dedicated parsers for `sequenceDiagram`, `classDiagram`, `stateDiagram`/`stateDiagram-v2`, `erDiagram`, `pie` chart, and `gantt` chart. Previously only `graph`/`flowchart` worked natively.
+- **BPMN native BPMN 2.0 renderer** (`engines/bpmn.py`) — parses XML/JSON BPMN 2.0 and renders via `drawsvg`. Previously required `bpmn-to-svg` CLI.
+
+### Changed
+- **Batteries-included dependencies** — `drawsvg`, `cairosvg`, and `python-docx` moved from optional extras to hard requirements. Single `pip install pidraw` now covers all renderers, PNG export, and DOCX export.
+- **TikZ engine** (`engines/tikz.py`) — auto-detects LaTeX/PDF tooling; falls back to native TikZ converter when absent.
+- **Mermaid engine** (`engines/mermaid.py`) — `stateDiagram-v2` and `stateDiagram` no longer require `mmdc` CLI.
+- **All renderers** — BPMN, Vega, Vega-Lite, Structurizr, WaveDrom, Graphviz, D2, PlantUML now have native fallback when CLI is absent.
+
+### Removed
+- No more dependencies on `mmdc`, `bpmn-to-svg`, `pdflatex`, `pdf2svg`, `dvisvgm`, or `vg2svg` CLI tools for basic usage.
+
 ## 1.2.1 (2026-06-08)
 
 ### Fixed

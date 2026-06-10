@@ -67,19 +67,20 @@ def _render_element(elem: dict[str, Any]) -> str:
         )
     elif t in ("arrow", "line"):
         pts = elem.get("points", [])
-        if pts and len(pts) >= 2:
-            abs_pts = [(x + p[0], y + p[1]) for p in pts]
-            d = " ".join(
-                f"{'M' if i==0 else 'L'}{px},{py}"
-                for i, (px, py) in enumerate(abs_pts)
-            )
-            marker_end = ""
-            if t == "arrow" and elem.get("endBinding"):
-                marker_end = ' marker-end="url(#arrowhead)"'
-            parts.append(
-                f'<path d="{d}" stroke="{sc}" stroke-width="{sw}" '
-                f'fill="none" opacity="{opacity}"{marker_end}/>'
-            )
+        if not pts or len(pts) < 2:
+            pts = [[0, 0], [w, h]]
+        abs_pts = [(x + p[0], y + p[1]) for p in pts]
+        d = " ".join(
+            f"{'M' if i==0 else 'L'}{px},{py}"
+            for i, (px, py) in enumerate(abs_pts)
+        )
+        marker_end = ""
+        if t == "arrow":
+            marker_end = ' marker-end="url(#arrowhead)"'
+        parts.append(
+            f'<path d="{d}" stroke="{sc}" stroke-width="{sw}" '
+            f'fill="none" opacity="{opacity}"{marker_end}/>'
+        )
     elif t == "freedraw":
         pts = elem.get("points", [])
         if pts and len(pts) >= 2:

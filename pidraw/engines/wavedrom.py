@@ -1,4 +1,4 @@
-"""Renderer for WaveDrom timing diagrams via ``wavedrom-cli`` (npm)."""
+"""Renderer for WaveDrom timing diagrams — tries CLI first, falls back to native."""
 from __future__ import annotations
 
 import os
@@ -8,24 +8,27 @@ import tempfile
 from typing import Optional
 
 from pidraw.engines.base import BaseRenderer
-from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
+from pidraw.exceptions import RenderError, RenderTimeoutError
 
-_MAX_SIZE = 100 * 1024
+_MAX_SIZE = 500 * 1024
 
 
 class WaveDromRenderer(BaseRenderer):
-    """Render WaveDrom timing/waveform diagrams to SVG."""
+    """Render WaveDrom timing/waveform diagrams to SVG.
+
+    Tries ``wavedrom-cli`` (npm) first; falls back to native Python
+    renderer if the CLI is not available.
+    """
 
     name = "wavedrom"
 
     def __init__(self, path: str | None = None) -> None:
         self._path = path
         self._resolved: str | None = path or self._find_wavedrom()
+        self._native = None
         if not self._resolved:
-            raise EngineNotAvailableError(
-                "wavedrom-cli",
-                setup_command="npm install -g wavedrom-cli",
-            )
+            from pidraw.engines.wavedrom_native import WaveDromNativeRenderer
+            self._native = WaveDromNativeRenderer()
 
     @staticmethod
     def _find_wavedrom() -> str | None:
@@ -38,6 +41,9 @@ class WaveDromRenderer(BaseRenderer):
             raise RenderError("wavedrom", "WaveDrom source contains null bytes")
         if len(source.encode("utf-8")) > _MAX_SIZE:
             raise RenderError("wavedrom", f"WaveDrom source exceeds {_MAX_SIZE // 1024} KB limit")
+
+        if self._native is not None:
+            return self._native.render(source)
 
         tmp_dir: Optional[str] = None
         try:

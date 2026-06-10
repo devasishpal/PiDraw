@@ -34,11 +34,18 @@ class D2Renderer(BaseRenderer):
     name = "d2"
 
     def __init__(self, d2_path: Optional[str] = None) -> None:
-        self._d2_path = d2_path or self._find_d2()
+        self._d2_path: Optional[str] = None
+        try:
+            self._d2_path = d2_path or self._find_d2()
+        except EngineNotAvailableError:
+            pass
 
     def render(self, source: str) -> str:
         self._validate_source(source)
-        svg = self._run_d2(source)
+        if self._d2_path is not None:
+            svg = self._run_d2(source)
+        else:
+            svg = self._run_native(source)
         self._validate_output(svg)
         return svg
 
@@ -75,6 +82,30 @@ class D2Renderer(BaseRenderer):
             ET.fromstring(svg)
         except ET.ParseError as exc:
             raise RenderError("d2", f"D2 output is not valid XML: {exc}")
+
+    def _run_native(self, source: str) -> str:
+        """Fallback native renderer when d2 CLI is absent or fails."""
+        from pidraw.backend.svg import SvgBackend
+        from pidraw.core.converters import get_converter
+        from pidraw.layout import apply_layout
+
+        converter = get_converter("d2")
+        if converter is None:
+            raise EngineNotAvailableError(
+                "d2 (native)",
+                setup_command="Install D2 from https://d2lang.com/tour/install/",
+            )
+        try:
+            diagram = converter.parse(source)
+        except Exception as exc:
+            raise RenderError("d2", f"Native converter failed: {exc}")
+        diagram = apply_layout(diagram)
+        backend = SvgBackend()
+        try:
+            svg = backend.render(diagram)
+        except Exception as exc:
+            raise RenderError("d2", f"SvgBackend failed: {exc}")
+        return svg
 
     def _run_d2(self, source: str) -> str:
         tmp_dir: Optional[str] = None

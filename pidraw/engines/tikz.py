@@ -1,4 +1,4 @@
-"""Renderer for TikZ diagrams via pdflatex + pdf2svg."""
+"""Renderer for TikZ diagrams via pdflatex + pdf2svg or native fallback."""
 from __future__ import annotations
 
 import os
@@ -16,11 +16,13 @@ _MAX_SIZE = 100 * 1024
 class TikzRenderer(BaseRenderer):
     r"""Render TikZ ``\begin{tikzpicture}`` to SVG.
 
-    Requires ``pdflatex`` (TeX Live / MiKTeX) and either ``pdf2svg``
-    or ``dvisvgm`` on ``PATH``.
+    Prefers ``pdflatex`` + ``pdf2svg``/``dvisvgm`` for full TikZ support.
+    Falls back to a native converter (common TikZ subset) when LaTeX
+    tools are not available.
     """
 
     name = "tikz"
+    _has_native_fallback: bool = False
 
     def __init__(self, path: str | None = None) -> None:
         self._path = path
@@ -28,16 +30,9 @@ class TikzRenderer(BaseRenderer):
         self._pdf2svg = shutil.which("pdf2svg")
         self._dvisvgm = shutil.which("dvisvgm")
 
-        if not self._pdflatex:
-            raise EngineNotAvailableError(
-                "pdflatex",
-                setup_command="Install TeX Live from https://tug.org/texlive/",
-            )
-        if not self._pdf2svg and not self._dvisvgm:
-            raise EngineNotAvailableError(
-                "pdf2svg/dvisvgm",
-                setup_command="Install pdf2svg or dvisvgm",
-            )
+        if not self._pdflatex or not (self._pdf2svg or self._dvisvgm):
+            self._pdflatex = None
+            self._has_native_fallback = True
 
     def _build_tex(self, source: str) -> str:
         return (
@@ -54,6 +49,9 @@ class TikzRenderer(BaseRenderer):
             raise RenderError("tikz", "TikZ source contains null bytes")
         if len(source.encode("utf-8")) > _MAX_SIZE:
             raise RenderError("tikz", f"TikZ source exceeds {_MAX_SIZE // 1024} KB limit")
+
+        if self._has_native_fallback:
+            return self._run_native(source)
 
         tmp_dir: Optional[str] = None
         try:
@@ -127,3 +125,24 @@ class TikzRenderer(BaseRenderer):
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh
                 sh.rmtree(tmp_dir, ignore_errors=True)
+
+    def _run_native(self, source: str) -> str:
+        """Native TikZ fallback using converter + SvgBackend."""
+        from pidraw.backend.svg import SvgBackend
+        from pidraw.core.converters import get_converter
+        from pidraw.layout import apply_layout
+
+        converter = get_converter("tikz")
+        if converter is None:
+            raise RenderError("tikz", "No TikZ converter available")
+        try:
+            diagram = converter.parse(source)
+        except Exception as exc:
+            raise RenderError("tikz", f"TikZ native converter failed: {exc}")
+        diagram = apply_layout(diagram)
+        backend = SvgBackend()
+        try:
+            svg = backend.render(diagram)
+        except Exception as exc:
+            raise RenderError("tikz", f"SvgBackend failed for TikZ: {exc}")
+        return svg

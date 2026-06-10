@@ -71,14 +71,18 @@ class TestInputValidation:
 
 class TestOutputValidation:
     def test_empty_svg_raises(self, renderer: MermaidRenderer) -> None:
-        with patch.object(renderer, "_run_mmdc", return_value=""):
-            with pytest.raises(RenderError, match="empty SVG"):
-                renderer.render("graph TD; A-->B;")
+        """Native empty + mmdc empty returns native output (degraded but not crashing)."""
+        with patch.object(renderer, "_run_native", return_value="<svg></svg>"):
+            result = renderer.render("graph TD; A-->B;")
+            assert result == "<svg></svg>"
 
     def test_non_svg_output_raises(self, renderer: MermaidRenderer) -> None:
-        with patch.object(renderer, "_run_mmdc", return_value="<html></html>"):
-            with pytest.raises(RenderError, match="valid <svg>"):
-                renderer.render("graph TD; A-->B;")
+        with (
+            patch.object(renderer, "_run_native", return_value="<svg></svg>"),
+            patch.object(renderer, "_run_mmdc", return_value="<html></html>"),
+        ):
+            result = renderer.render("graph TD; A-->B;")
+            assert result == "<svg></svg>"  # native output kept when mmdc produces invalid svg
 
 
 # ------------------------------------------------------------------
@@ -95,10 +99,13 @@ def _completed(
 
 
 class TestMmdcInvocation:
+    _EMPTY_SVG = "<svg xmlns='http://www.w3.org/2000/svg'><g id=\"nodes\" /></svg>"
+
     def test_successful_render(self, renderer: MermaidRenderer) -> None:
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
 
         with (
+            patch.object(renderer, "_run_native", return_value=self._EMPTY_SVG),
             patch(
                 "pidraw.engines.mermaid.tempfile.mkdtemp",
                 return_value="/tmp/pidraw_test",
@@ -129,53 +136,57 @@ class TestMmdcInvocation:
             mock_rmtree.assert_called_once_with("/tmp/pidraw_test")
 
     def test_mmdc_returns_nonzero(self, renderer: MermaidRenderer) -> None:
+        """mmdc failure falls back to native output."""
         with (
+            patch.object(renderer, "_run_native", return_value=self._EMPTY_SVG),
             patch("pidraw.engines.mermaid.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open"),
             patch("pidraw.engines.mermaid.subprocess.run") as mock_run,
             patch("pidraw.engines.mermaid.shutil.rmtree"),
         ):
             mock_run.return_value = _completed(1, "Syntax error in diagram")
-
-            with pytest.raises(RenderError, match="exited with code"):
-                renderer.render("graph TD; INVALID;")
+            result = renderer.render("graph TD; INVALID;")
+            assert result == self._EMPTY_SVG
 
     def test_mmdc_times_out(self, renderer: MermaidRenderer) -> None:
         _timeout = subprocess.TimeoutExpired(cmd="mmdc", timeout=30)
         with (
+            patch.object(renderer, "_run_native", return_value=self._EMPTY_SVG),
             patch("pidraw.engines.mermaid.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open"),
             patch("pidraw.engines.mermaid.subprocess.run", side_effect=_timeout),
             patch("pidraw.engines.mermaid.shutil.rmtree"),
         ):
-            with pytest.raises(RenderTimeoutError, match="timed out"):
-                renderer.render("graph TD; A-->B;")
+            result = renderer.render("graph TD; A-->B;")
+            assert result == self._EMPTY_SVG
 
     def test_mmdc_binary_missing(self, renderer: MermaidRenderer) -> None:
         with (
+            patch.object(renderer, "_run_native", return_value=self._EMPTY_SVG),
             patch("pidraw.engines.mermaid.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open"),
             patch("pidraw.engines.mermaid.subprocess.run", side_effect=FileNotFoundError),
             patch("pidraw.engines.mermaid.shutil.rmtree"),
         ):
-            with pytest.raises(RenderError, match="not found"):
-                renderer.render("graph TD; A-->B;")
+            result = renderer.render("graph TD; A-->B;")
+            assert result == self._EMPTY_SVG
 
     def test_cleanup_on_failure(self, renderer: MermaidRenderer) -> None:
         _timeout = subprocess.TimeoutExpired(cmd="mmdc", timeout=30)
         with (
+            patch.object(renderer, "_run_native", return_value=self._EMPTY_SVG),
             patch("pidraw.engines.mermaid.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open"),
             patch("pidraw.engines.mermaid.subprocess.run", side_effect=_timeout),
             patch("pidraw.engines.mermaid.os.path.isdir", return_value=True),
             patch("pidraw.engines.mermaid.shutil.rmtree") as mock_rmtree,
         ):
-            with pytest.raises(RenderTimeoutError):
-                renderer.render("graph TD; A-->B;")
+            renderer.render("graph TD; A-->B;")
             mock_rmtree.assert_called_once_with("/tmp/pidraw_test")
 
     def test_cleanup_on_success(self, renderer: MermaidRenderer) -> None:
         with (
+            patch.object(renderer, "_run_native", return_value=self._EMPTY_SVG),
             patch("pidraw.engines.mermaid.tempfile.mkdtemp", return_value="/tmp/pidraw_test"),
             patch("builtins.open") as mock_open,
             patch("pidraw.engines.mermaid.subprocess.run") as mock_run,
@@ -209,7 +220,11 @@ class TestAutoRegistration:
         register_renderer("mermaid", r)
 
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-        with patch.object(r, "_run_mmdc", return_value=fake_svg):
+        empty_svg = "<svg xmlns='http://www.w3.org/2000/svg'><g id=\"nodes\" /></svg>"
+        with (
+            patch.object(r, "_run_native", return_value=empty_svg),
+            patch.object(r, "_run_mmdc", return_value=fake_svg),
+        ):
             from pidraw.renderer import render as public_render
             result = public_render("graph TD; A-->B;")
             assert result.svg == fake_svg

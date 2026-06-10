@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from pidraw.engines.graphviz import GraphvizRenderer
-from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
+from pidraw.exceptions import RenderError, RenderTimeoutError
 from pidraw.registry import clear_registry, register_renderer
 
 
@@ -26,8 +26,8 @@ def renderer(mock_dot_path: Any) -> GraphvizRenderer:
 class TestConstruction:
     def test_find_dot_raises_when_missing(self) -> None:
         with patch("pidraw.engines.graphviz.shutil.which", return_value=None):
-            with pytest.raises(EngineNotAvailableError):
-                GraphvizRenderer()
+            r = GraphvizRenderer()
+            assert r._dot_path is None  # falls back to native
 
     def test_explicit_path_used(self) -> None:
         r = GraphvizRenderer(dot_path="/custom/dot")

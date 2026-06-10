@@ -212,6 +212,9 @@ class SvgBackend:
         cy: float,
         style: Style,
     ) -> None:
+        lines = label.text.split("\n") if label.text else [""]
+        line_h = style.font_size * style.line_height
+
         text = SubElement(parent, "text", {
             "x": str(cx),
             "y": str(cy),
@@ -222,7 +225,18 @@ class SvgBackend:
             "font-weight": style.font_weight.value,
             "fill": style.text_color,
         })
-        text.text = label.text
+
+        if len(lines) == 1:
+            text.text = lines[0]
+        else:
+            total_h = line_h * (len(lines) - 1)
+            for i, line in enumerate(lines):
+                dy = -total_h / 2 if i == 0 else line_h
+                tspan = SubElement(text, "tspan", {
+                    "x": str(cx),
+                    "dy": str(dy),
+                })
+                tspan.text = line if line else " "
 
     def _render_group(self, parent: Element, group: Group, diagram: Diagram) -> None:
         g = SubElement(parent, "g", {"id": f"group-{group.id}", "class": "group"})
@@ -241,15 +255,7 @@ class SvgBackend:
                 "stroke-width": str(style.stroke_width),
                 "stroke-dasharray": "6,3",
             })
-            if group.label is not None and group.label.text:
-                self._render_label(g, group.label, pos.x + size.width / 2, pos.y + 16, style)
-
-        for node in group.nodes:
-            self._render_node(g, node, diagram)
-        for edge in group.edges:
-            self._render_edge(g, edge, diagram)
-        for child_group in group.groups:
-            self._render_group(g, child_group, diagram)
+            # Don't render group label - parent node serves as visual header
 
 
 _ARROW_MARKERS: dict[ArrowStyle, tuple[str, str, str]] = {

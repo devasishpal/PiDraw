@@ -18,9 +18,23 @@ from pidraw.core.models import (
 
 _BOX_PATTERN = re.compile(r'[+][-]+[+]')
 _LINE_PATTERN = re.compile(r'[|]')
-_ARROW_PATTERN = re.compile(r'[-]+[>]|[-]+[v^]')
+_ARROW_RIGHT = re.compile(r'[-]+[>]')
+_ARROW_LEFT = re.compile(r'[<][-]+')
+_ARROW_ANY = re.compile(r'<[-]+|[-]+>')
 
 _NODE_LABEL = re.compile(r'[|]([^|]+)[|]')
+
+
+def _find_all_boxes(line: str) -> list[tuple[int, int]]:
+    boxes = []
+    pos = 0
+    while True:
+        m = _BOX_PATTERN.search(line, pos)
+        if not m:
+            break
+        boxes.append((m.start(), m.end()))
+        pos = m.end()
+    return boxes
 
 
 @register_converter("ascii")
@@ -32,30 +46,35 @@ class ASCIIConverter(DiagramConverter):
         diagram.layout = Layout(layout_type=LayoutType.FLOW, direction="TB", node_spacing=40, layer_spacing=50)
 
         lines = source.strip().split("\n")
-        connections: list[tuple[int, int]] = []
+        connections: list[tuple[str, str]] = []
         node_counter = 0
 
         i = 0
         while i < len(lines):
             line = lines[i]
-            box_match = _BOX_PATTERN.search(line)
-            if box_match:
-                start = box_match.start()
-                end = box_match.end()
+            boxes = _find_all_boxes(line)
+            for start, end in boxes:
                 width = end - start - 2
 
                 if i + 2 < len(lines):
                     mid_line = lines[i + 1]
                     if len(mid_line) > start + 1 and mid_line[start] == "|":
-                        label_match = _NODE_LABEL.search(mid_line[start:end])
-                        label_text = label_match.group(1) if label_match else f"Box{node_counter + 1}"
+                        # Scan all content lines for first non-empty label
+                        box_label = ""
                         height = 1
                         j = i + 1
-                        while j < len(lines) and "|" in lines[j][start:end] if len(lines[j]) > start else False:
+                        while j < len(lines) and len(lines[j]) > start and "|" in lines[j][start:end]:
+                            lm = _NODE_LABEL.search(lines[j][start:end])
+                            if lm:
+                                candidate = lm.group(1).strip()
+                                if candidate and not box_label:
+                                    box_label = candidate
                             height += 1
                             j += 1
 
-                        box_label = label_text.strip()
+                        if not box_label:
+                            box_label = f"Box{node_counter + 1}"
+
                         nid = f"n{node_counter}"
                         node_counter += 1
                         node = Node(
@@ -67,24 +86,45 @@ class ASCIIConverter(DiagramConverter):
                         )
                         diagram.add_node(node)
 
-                        # Look for connections
-                        for k in range(max(0, i - 1), min(len(lines), i + height + 2)):
-                            conn_line = lines[k]
-                            arrow = _ARROW_PATTERN.search(conn_line)
-                            if arrow:
-                                conn_start = arrow.start()
-                                conn_end = arrow.end()
-                                # Find which box this connects to
-                                for existing in diagram.all_nodes():
-                                    if existing.id != nid and existing.position:
-                                        ex, _ = existing.position.x / 10, existing.position.y / 20
-                                        if abs(conn_end * 10 - ex) < 30 or abs(conn_start * 10 - ex) < 30:
-                                            connections.append((nid, existing.id))
-
             i += 1
 
+        # Second pass: find connections (all boxes already parsed)
+        for i, line in enumerate(lines):
+            for arrow in _ARROW_ANY.finditer(line):
+                arrow_start_col = arrow.start()
+                arrow_text = arrow.group()
+                is_right = ">" in arrow_text
+                # Find nearest box to arrow head and tail
+                src_node = None
+                tgt_node = None
+                for node in diagram.all_nodes():
+                    if node.position is None:
+                        continue
+                    node_col = node.position.x / 10
+                    node_row = node.position.y / 20
+                    if abs(node_row - i) > 2:
+                        continue
+                    if is_right:
+                        # src is left of arrow, tgt is right
+                        if node_col < arrow_start_col:
+                            if src_node is None or node_col > src_node.position.x / 10:
+                                src_node = node
+                        elif node_col > arrow.end():
+                            if tgt_node is None or node_col < tgt_node.position.x / 10:
+                                tgt_node = node
+                    else:
+                        # <-- left arrow: src is right, tgt is left
+                        if node_col > arrow.end():
+                            if src_node is None or node_col < src_node.position.x / 10:
+                                src_node = node
+                        elif node_col < arrow_start_col:
+                            if tgt_node is None or node_col > tgt_node.position.x / 10:
+                                tgt_node = node
+                if src_node and tgt_node:
+                    connections.append((src_node.id, tgt_node.id))
+
         for src_id, tgt_id in connections:
-            if tgt_id not in [e.target for e in diagram.edges if e.source == src_id]:
+            if src_id != tgt_id and tgt_id not in [e.target for e in diagram.edges if e.source == src_id]:
                 edge = Edge(
                     id=f"{src_id}->{tgt_id}",
                     source=src_id,

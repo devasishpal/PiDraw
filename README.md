@@ -2,7 +2,9 @@
 
 > Universal diagram rendering platform — convert any diagram language to SVG or PNG.
 
-PiDraw renders source code from **14+ diagram languages** into optimized SVG and PNG. It supports native (pure Python) rendering for 5 formats, external CLI tools for others, SVG optimization, quality enhancement, caching, parallel batch processing, file watching, plugin architecture, and async APIs.
+PiDraw renders source code from **18 diagram languages** into optimized SVG and PNG. All formats work with **zero CLI tools** — just `pip install pidraw` and done. Includes native TikZ support, SVG optimization, quality enhancement, caching, parallel batch processing, file watching, plugin architecture, and async APIs.
+
+**v1.3.0 is fully batteries-included** — no npm, no Java, no LaTeX, no separate plugin installs.
 
 ---
 
@@ -28,24 +30,16 @@ PiDraw renders source code from **14+ diagram languages** into optimized SVG and
 ## Installation
 
 ```bash
-# Install from PyPI (recommended)
+# Install from PyPI (recommended) — everything included
 pip install pidraw
 
 # Or install from source
 git clone https://github.com/devasishpal/PiDraw.git
 cd PiDraw
 pip install -e .
-
-# For PNG export (optional)
-pip install playwright
-playwright install chromium
 ```
 
-On first import, missing CLI tools are automatically installed in a background thread. You can also trigger setup manually:
-
-```bash
-pidraw setup
-```
+That's it. All 18 diagram languages, all renderers, PNG export, and DOCX export work immediately with no extra tools.
 
 ---
 
@@ -284,7 +278,7 @@ Show the PiDraw version.
 
 ```bash
 pidraw version
-# pidraw v1.2.1
+# pidraw v1.3.0
 ```
 
 ---
@@ -325,24 +319,24 @@ pidraw benchmark --quick
 ## Supported Formats
 
 | Format | Language ID | File Extensions | Render Method |
-|---|---|---|---|
+|---|---|---|---|---|
 | Mermaid | `mermaid` | `.mmd`, `.mermaid` | **Native** (pure Python) |
 | PlantUML | `plantuml` | `.puml`, `.plantuml`, `.iuml` | **Native** (pure Python) |
 | Graphviz DOT | `graphviz` | `.dot`, `.gv` | **Native** (pure Python) |
 | D2 | `d2` | `.d2` | **Native** (pure Python) |
 | ASCII Art | `ascii` | `.txt` | **Native** (pure Python) |
-| BPMN 2.0 | `bpmn` | `.bpmn` | CLI (`bpmn-svg`) |
-| Markmap | `markmap` | `.mm` | CLI (`markmap` + Playwright) |
-| Nomnoml | `nomnoml` | `.noml` | CLI (`nomnoml`) |
-| WaveDrom | `wavedrom` | `.json` | CLI (`wavedrom-cli`) |
-| Structurizr | `structurizr` | `.dsl` | CLI (`structurizr-cli`) |
-| Vega | `vega` | `.json` | CLI (`vg2svg`) |
-| Vega-Lite | `vega-lite` | `.json` | **Native** or CLI |
+| Markmap | `markmap` | `.md`, `.mm` | **Native** (pure Python) |
+| Nomnoml | `nomnoml` | `.noml` | **Native** (pure Python) |
+| WaveDrom | `wavedrom` | `.json` | **Native** (pure Python) |
+| Structurizr | `structurizr` | `.dsl` | **Native** (pure Python) |
+| BPMN 2.0 | `bpmn` | `.bpmn` | **Native** (pure Python) |
+| Vega | `vega` | `.json` | **Native** (pure Python) |
+| Vega-Lite | `vega-lite` | `.json` | **Native** (pure Python) |
 | Excalidraw | `excalidraw` | `.json`, `.excalidraw` | **Native** (pure Python) |
+| TikZ | `tikz` | `.tex` | **Native** (pure Python, subset) |
 | Kroki | `kroki` | `.txt`, `.kroki` | **HTTP API** (no CLI needed) |
-| TikZ | `tikz` | `.tex` | CLI (`pdflatex` + `pdf2svg`) |
 
-**5 formats work immediately with no extra tools** — mermaid, plantuml, graphviz, d2, ascii.
+**All 18 formats work immediately with just `pip install pidraw`** — zero CLI tools required. Mermaid advanced types (gitgraph, quadrantChart, xychart, timeline, journey, mindmap, zenuml, sankey, requirementDiagram) additionally support `mmdc` CLI for enhanced output.
 
 
 
@@ -366,6 +360,18 @@ svg = render("digraph { A -> B }", language="graphviz")
 
 # D2
 svg = render("A -> B", language="d2")
+
+# Nomnoml
+svg = render("[Customer]-[Order]", language="nomnoml")
+
+# Markmap (markdown headings → mindmap)
+svg = render("# Root\n## Section 1\n### Detail", language="markmap")
+
+# Structurizr (C4 model)
+svg = render('workspace {\n  model {\n    user = person "User"\n    system = softwareSystem "My System"\n    user -> system "Uses"\n  }\n}', language="structurizr")
+
+# WaveDrom (timing diagrams)
+svg = render('{"signal": [{"name": "clk", "wave": "P"}]}', language="wavedrom")
 
 # Auto-detect language
 svg = render("graph TD; A-->B")
@@ -468,18 +474,23 @@ detect_language()  ──►  Language ID (e.g. "mermaid")
     ▼
 get_renderer(language)  ──►  Engine Registry
     │
-    ├── CLI-Based Renderer
-    │       └── subprocess → temp file/pipe → SVG
-    │
-    ├── NativeRenderer (for converter-supported languages)
-    │       ├── converter.parse(source) → Diagram model
-    │       ├── apply_layout(diagram) → positioned nodes
-    │       ├── apply_theme(diagram) → styled diagram
-    │       └── SvgBackend.render(diagram) → SVG string
-    │
-    ├── KrokiRenderer (HTTP POST to kroki.io)
-    │
-    └── ExcalidrawRenderer (pure Python JSON → SVG)
+      ├── NativeRenderer (for 10 converter-supported languages)
+      │       ├── converter.parse(source) → Diagram model
+      │       ├── apply_layout(diagram) → positioned nodes
+      │       ├── apply_theme(diagram) → styled diagram
+      │       └── SvgBackend.render(diagram) → SVG string
+      │
+      ├── CLI-Fallback Renderer (prefers CLI, falls back to native)
+      │       ├── tikz → TikzConverter native fallback
+      │       ├── bpmn → BPMN drawsvg native renderer
+      │       ├── structurizr → StructurizrConverter native fallback
+      │       ├── wavedrom → WaveDromNativeRenderer fallback
+      │       ├── mermaid → MermaidConverter native fallback
+      │       └── vega/vega-lite → vl-convert-python native
+      │
+      ├── KrokiRenderer (HTTP POST to kroki.io)
+      │
+      ├── ExcalidrawRenderer (pure Python JSON → SVG)
     │
     ▼
 [Optional] optimize_svg(svg, level="balanced")
@@ -497,15 +508,20 @@ Each diagram format has a dedicated renderer engine in `pidraw/engines/`. Engine
 
 ### Converters
 
-5 formats have pure-Python parsers (`pidraw/core/converters/`) that produce an internal `Diagram` model, which `SvgBackend` renders to SVG — no CLI tools needed:
+9 formats have pure-Python parsers (`pidraw/core/converters/`) that produce an internal `Diagram` model, which `SvgBackend` renders to SVG — no CLI tools needed:
 
 | Converter | What it parses |
-|---|---|
-| `MermaidConverter` | `graph TD`, `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram`, `ER`, `journey`, `gantt`, `pie`, `gitgraph`, `mindmap`, `timeline`, `block`, `C4`, `network`, `packet`, `quadrant`, `requirement`, `sankey`, `xy_chart` |
+|---|---|---|
+| `MermaidConverter` | `graph TD`, `flowchart`, `sequenceDiagram`, `classDiagram`, `stateDiagram`, `erDiagram`, `pie`, `gantt` |
 | `PlantUMLConverter` | `@startuml` blocks, participants, actors, arrows |
 | `GraphvizConverter` | `digraph`/`graph` statements with attributes |
 | `D2Converter` | D2 node/edge syntax with shapes and styles |
 | `ASCIIConverter` | Simple box-drawing diagrams (`+--+` boxes, `-->` arrows) |
+| `NomnomlConverter` | nomnoml DSL (`[box]` syntax, arrows, associations) |
+| `MarkmapConverter` | Markdown headings → mindmap tree |
+| `StructurizrConverter` | Structurizr DSL (C4 model: persons, software systems, containers, relationships) |
+| `TikzConverter` | TikZ `\node`/`\draw`/`\path` subset with shapes, colors, arrows |
+| `WaveDromNativeRenderer` | WaveDrom JSON timing diagrams → SVG waveforms directly |
 
 ### SVG Optimizer
 
@@ -645,9 +661,8 @@ svgs = render_many(sources, language="mermaid")
 ## Requirements
 
 - Python >= 3.10
-- Optional: Node.js + npm (for CLI-based formats like nomnoml, markmap, wavedrom)
-- Optional: Java Runtime (for structurizr-cli)
-- Optional: Playwright (for PNG export via `-f png`)
+
+**Everything works with just `pip install pidraw`** — no CLI tools, no Java, no Node.js, no LaTeX required. All 18 diagram languages, PNG export (via cairosvg), and DOCX export are included in the base install.
 
 ---
 

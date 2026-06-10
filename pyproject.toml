@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pidraw"
-version = "1.2.1"
+version = "1.3.0"
 description = "Universal diagram rendering platform — render any diagram language to SVG or PNG"
 readme = "README.md"
 license = { text = "MIT" }
@@ -41,6 +41,9 @@ classifiers = [
 dependencies = [
     "typer>=0.12",
     "vl-convert-python",
+    "drawsvg>=2.0",
+    "cairosvg>=2.7",
+    "python-docx>=1.0",
 ]
 
 [project.urls]
