@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from pidraw.engines.mermaid import MermaidRenderer
-from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
+from pidraw.exceptions import EngineNotAvailableError, RenderError
 from pidraw.registry import clear_registry, register_renderer
 
 # ------------------------------------------------------------------

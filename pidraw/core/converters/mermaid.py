@@ -10,7 +10,6 @@ from pidraw.core.models import (
     Diagram,
     Edge,
     EdgeStyle,
-    Group,
     Label,
     Layout,
     LayoutType,
@@ -534,7 +533,6 @@ class MermaidConverter(DiagramConverter):
 
             if em2:
                 src = em2.group(1)
-                card = em2.group(2)
                 label_text = em2.group(5) or ""
 
                 # Simple heuristic for the target — the last word in the line before ":"
@@ -670,8 +668,6 @@ class MermaidConverter(DiagramConverter):
             if tm:
                 task_name = tm.group(1).strip()
                 status = tm.group(2) or "active"
-                start = tm.group(4)
-                duration = tm.group(5)
 
                 tid = f"task_{task_idx[0]}"
                 label = f"{task_name}"
@@ -702,9 +698,6 @@ class MermaidConverter(DiagramConverter):
             tm2 = re.match(r"\s*([\w\s]+)\s*:\s*([\w\d]+)\s*,\s*([\w\d]+)", line)
             if tm2:
                 task_name = tm2.group(1).strip()
-                start = tm2.group(2)
-                duration = tm2.group(3)
-
                 tid = f"task_{task_idx[0]}"
                 label = f"{task_name}"
                 if section_name:

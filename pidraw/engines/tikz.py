@@ -8,7 +8,7 @@ import tempfile
 from typing import Optional
 
 from pidraw.engines.base import BaseRenderer
-from pidraw.exceptions import EngineNotAvailableError, RenderError, RenderTimeoutError
+from pidraw.exceptions import RenderError, RenderTimeoutError
 
 _MAX_SIZE = 100 * 1024
 

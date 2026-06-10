@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Optional
+from typing import Any
 
 from pidraw.core.converters.base import DiagramConverter, register_converter
 from pidraw.core.models import (
@@ -195,9 +195,7 @@ class TikzConverter(DiagramConverter):
         for match in _EDGE_DEF_RE.finditer(source):
             opts_str = match.group(1) or ""
             src_id = match.group(2)
-            path_ops = match.group(3)
             tgt_id = match.group(4)
-            label_node_opts = match.group(5)
             label_text = match.group(6) or ""
 
             opts = self._parse_options(opts_str)

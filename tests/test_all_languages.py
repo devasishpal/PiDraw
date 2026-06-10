@@ -1,6 +1,7 @@
 """Test all language renderers and save SVG+PNG outputs."""
-import os
 from pathlib import Path
+
+from pidraw import render
 from pidraw.backend.png import svg_to_png
 
 OUT = Path(r"C:\Users\Alok\Desktop\pidraw_test")
@@ -14,13 +15,11 @@ def save(name, svg):
         png = svg_to_png(svg, transparent=True, trim=True)
         png_path.write_bytes(png)
         png_ok = True
-    except Exception as e:
+    except Exception:
         png = svg_to_png(svg, transparent=False, trim=False)
         png_path.write_bytes(png)
-        png_ok = f"fallback ({e})"
+        png_ok = "fallback"
     print(f"  {name}: SVG {len(svg)} bytes, PNG {png_path.stat().st_size if png_path.exists() else 0} bytes (PNG: {png_ok})")
-
-from pidraw import render
 
 # 1. Mermaid flowchart
 print("\n1. Mermaid (flowchart)")

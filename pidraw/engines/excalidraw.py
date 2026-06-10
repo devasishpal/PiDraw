@@ -186,6 +186,12 @@ class ExcalidrawRenderer(BaseRenderer):
             f'viewBox="{min_x - pad} {min_y - pad} {vw} {vh}" '
             f'width="{vw}" height="{vh}" '
             f'style="background:#ffffff">'
+            '<defs>'
+            '<marker id="arrowhead" markerWidth="10" markerHeight="10" '
+            'refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">'
+            '<path d="M0,0 L10,5 L0,10 Z" fill="#000" stroke="#000" stroke-width="1"/>'
+            '</marker>'
+            '</defs>'
         ]
 
         # Per-element try/except — a single bad element must not abort the whole render

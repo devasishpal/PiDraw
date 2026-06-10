@@ -1,12 +1,13 @@
 """Render all diagram files in pidraw_test dir."""
-import os, sys, glob
+import glob
+import os
 from pathlib import Path
-
-out = Path(r"C:\Users\Alok\Desktop\pidraw_test")
-os.chdir(str(out))
 
 from pidraw import render_file
 from pidraw.backend.png import svg_to_png
+
+out = Path(r"C:\Users\Alok\Desktop\pidraw_test")
+os.chdir(str(out))
 
 files = sorted(glob.glob("*.mmd") + glob.glob("*.puml") + glob.glob("*.dot") +
                glob.glob("*.d2") + glob.glob("*.txt") + glob.glob("*.md") +
@@ -33,7 +34,7 @@ for f in files:
             png = svg_to_png(svg, transparent=True, trim=True)
             png_path.write_bytes(png)
             png_ok = f"PNG {len(png)}b"
-        except Exception as e:
+        except Exception:
             try:
                 png = svg_to_png(svg, transparent=False, trim=False)
                 png_path.write_bytes(png)

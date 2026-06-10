@@ -41,6 +41,7 @@ __all__ = [
     "NomnomlConverter",
     "MarkmapConverter",
     "StructurizrConverter",
+    "TikzConverter",
     "get_converter",
     "convert",
     "list_converters",
