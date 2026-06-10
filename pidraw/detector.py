@@ -68,7 +68,7 @@ _DETECTION_RULES: list[tuple[re.Pattern[str], DiagramLanguage, float]] = [
     (re.compile(r'"mark"\s*:\s*"[a-z]+"'), DiagramLanguage.VEGA_LITE, 0.85),
     # --- WaveDrom ---
     (re.compile(r'\{\s*"signal"\s*:\s*\['), DiagramLanguage.WAVEDROM, 0.97),
-    (re.compile(r'\{\s*signal\s*:\s*\['), DiagramLanguage.WAVEDROM, 0.96),
+    (re.compile(r"\{\s*signal\s*:\s*\["), DiagramLanguage.WAVEDROM, 0.96),
     (re.compile(r'"wave":\s*["\']'), DiagramLanguage.WAVEDROM, 0.96),
     # --- Excalidraw ---
     (re.compile(r'"type"\s*:\s*"excalidraw"'), DiagramLanguage.EXCALIDRAW, 0.98),

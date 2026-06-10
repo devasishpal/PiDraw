@@ -49,7 +49,7 @@ _SAMPLE_MERMAID = """graph TD
 """
 
 _SAMPLE_LARGE_MERMAID = "graph TD\n" + "\n".join(
-    f"    N{i}[Node {i}] --> N{i+1}" for i in range(100)
+    f"    N{i}[Node {i}] --> N{i + 1}" for i in range(100)
 )
 
 _SAMPLE_GRAPHVIZ = """digraph G {
@@ -73,6 +73,7 @@ def _mb_usage() -> float:
     """Return current RSS memory usage in MB (best-effort)."""
     try:
         import psutil  # type: ignore[import-untyped]
+
         return float(psutil.Process(os.getpid()).memory_info().rss / (1024 * 1024))
     except ImportError:
         return 0.0
@@ -145,11 +146,7 @@ def benchmark_optimization(
             sizes_after.append(result.optimized_size)
 
     avg = sum(times) / len(times) if times else 0.0
-    avg_saved = (
-        (sum(sizes_before) - sum(sizes_after)) / len(sizes_before)
-        if sizes_before
-        else 0
-    )
+    avg_saved = (sum(sizes_before) - sum(sizes_after)) / len(sizes_before) if sizes_before else 0
 
     return BenchmarkResult(
         name="Optimization",
@@ -194,9 +191,7 @@ def benchmark_large_diagram(
 ) -> BenchmarkResult:
     """Render a large diagram to stress-test throughput."""
     # Generate a 500-node Mermaid diagram
-    large = "graph TD\n" + "\n".join(
-        f"    N{i}[Node {i}] --> N{i+1}" for i in range(500)
-    )
+    large = "graph TD\n" + "\n".join(f"    N{i}[Node {i}] --> N{i + 1}" for i in range(500))
 
     mem_before = _mb_usage()
     start = time.perf_counter()
@@ -241,6 +236,7 @@ def run_benchmarks(
     """
     if render_func is None:
         from pidraw.renderer import render as _default_render
+
         render_func = _default_render
 
     report = BenchmarkReport()
@@ -253,9 +249,7 @@ def run_benchmarks(
     report.results.append(benchmark_cache_efficiency(render_func, iterations=iters))
     report.results.append(benchmark_large_diagram(render_func))
 
-    report.total_elapsed_ms = round(
-        (time.perf_counter() - start_total) * 1000, 1
-    )
+    report.total_elapsed_ms = round((time.perf_counter() - start_total) * 1000, 1)
     report.system_info = f"Python {sys.version.split()[0]}, pid={os.getpid()}"
 
     return report

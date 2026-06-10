@@ -21,9 +21,7 @@ class NativeRenderer(BaseRenderer):
     def __init__(self, language: str) -> None:
         converter = get_converter(language)
         if converter is None:
-            raise RenderingError(
-                f"No converter registered for language: {language}"
-            )
+            raise RenderingError(f"No converter registered for language: {language}")
         self._language = language
         self._converter = converter
 
@@ -31,9 +29,7 @@ class NativeRenderer(BaseRenderer):
         try:
             diagram = self._converter.parse(source)
         except Exception as exc:
-            raise RenderingError(
-                f"{self._language} converter failed: {exc}"
-            ) from exc
+            raise RenderingError(f"{self._language} converter failed: {exc}") from exc
 
         diagram = apply_layout(diagram)
 
@@ -41,8 +37,6 @@ class NativeRenderer(BaseRenderer):
         try:
             svg = backend.render(diagram)
         except Exception as exc:
-            raise RenderingError(
-                f"SvgBackend failed for {self._language}: {exc}"
-            ) from exc
+            raise RenderingError(f"SvgBackend failed for {self._language}: {exc}") from exc
 
         return svg

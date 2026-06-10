@@ -16,13 +16,13 @@ from pidraw.core.models import (
     Size,
 )
 
-_BOX_PATTERN = re.compile(r'[+][-]+[+]')
-_LINE_PATTERN = re.compile(r'[|]')
-_ARROW_RIGHT = re.compile(r'[-]+[>]')
-_ARROW_LEFT = re.compile(r'[<][-]+')
-_ARROW_ANY = re.compile(r'<[-]+|[-]+>')
+_BOX_PATTERN = re.compile(r"[+][-]+[+]")
+_LINE_PATTERN = re.compile(r"[|]")
+_ARROW_RIGHT = re.compile(r"[-]+[>]")
+_ARROW_LEFT = re.compile(r"[<][-]+")
+_ARROW_ANY = re.compile(r"<[-]+|[-]+>")
 
-_NODE_LABEL = re.compile(r'[|]([^|]+)[|]')
+_NODE_LABEL = re.compile(r"[|]([^|]+)[|]")
 
 
 def _find_all_boxes(line: str) -> list[tuple[int, int]]:
@@ -43,7 +43,9 @@ class ASCIIConverter(DiagramConverter):
 
     def parse(self, source: str) -> Diagram:
         diagram = Diagram(id="ascii_diagram", title="ASCII Diagram")
-        diagram.layout = Layout(layout_type=LayoutType.FLOW, direction="TB", node_spacing=40, layer_spacing=50)
+        diagram.layout = Layout(
+            layout_type=LayoutType.FLOW, direction="TB", node_spacing=40, layer_spacing=50
+        )
 
         lines = source.strip().split("\n")
         connections: list[tuple[str, str]] = []
@@ -63,7 +65,9 @@ class ASCIIConverter(DiagramConverter):
                         box_label = ""
                         height = 1
                         j = i + 1
-                        while j < len(lines) and len(lines[j]) > start and "|" in lines[j][start:end]:
+                        while (
+                            j < len(lines) and len(lines[j]) > start and "|" in lines[j][start:end]
+                        ):
                             lm = _NODE_LABEL.search(lines[j][start:end])
                             if lm:
                                 candidate = lm.group(1).strip()
@@ -81,7 +85,9 @@ class ASCIIConverter(DiagramConverter):
                             id=nid,
                             label=Label(text=box_label),
                             shape=Shape(shape_type=ShapeType.RECTANGLE),
-                            size=Size(max(len(box_label) * 8 + 20, width * 7), max(height * 18, 30)),
+                            size=Size(
+                                max(len(box_label) * 8 + 20, width * 7), max(height * 18, 30)
+                            ),
                             position=Position(x=start * 10, y=i * 20),
                         )
                         diagram.add_node(node)
@@ -124,7 +130,9 @@ class ASCIIConverter(DiagramConverter):
                     connections.append((src_node.id, tgt_node.id))
 
         for src_id, tgt_id in connections:
-            if src_id != tgt_id and tgt_id not in [e.target for e in diagram.edges if e.source == src_id]:
+            if src_id != tgt_id and tgt_id not in [
+                e.target for e in diagram.edges if e.source == src_id
+            ]:
                 edge = Edge(
                     id=f"{src_id}->{tgt_id}",
                     source=src_id,
@@ -134,13 +142,15 @@ class ASCIIConverter(DiagramConverter):
                 diagram.add_edge(edge)
 
         if node_counter == 0:
-            diagram.add_node(Node(
-                id="n0",
-                label=Label(text="Diagram"),
-                shape=Shape(shape_type=ShapeType.RECTANGLE),
-                size=Size(200, 80),
-                position=Position(20, 20),
-            ))
+            diagram.add_node(
+                Node(
+                    id="n0",
+                    label=Label(text="Diagram"),
+                    shape=Shape(shape_type=ShapeType.RECTANGLE),
+                    size=Size(200, 80),
+                    position=Position(20, 20),
+                )
+            )
 
         diagram.viewport = None
 

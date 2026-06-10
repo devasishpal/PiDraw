@@ -1,4 +1,5 @@
 """TikZ-to-Diagram converter — supports a practical subset of TikZ for diagrams."""
+
 from __future__ import annotations
 
 import re
@@ -24,22 +25,22 @@ from pidraw.core.models import (
 _TIKZ_COMMENT_RE = re.compile(r"(?<!\\)%.*$", re.MULTILINE)
 _NODE_DEF_RE = re.compile(
     r"\\node\s*"
-    r"(?:\[([^\]]*)\])?\s*"   # style options
+    r"(?:\[([^\]]*)\])?\s*"  # style options
     r"(?:\(([\w\d_-]+)\))?\s*"  # name
     r"(?:at\s*\(([^)]*)\))?\s*"  # position
-    r"(?:\{([^}]*)\})?\s*"       # label text
+    r"(?:\{([^}]*)\})?\s*"  # label text
     r";",
     re.DOTALL,
 )
 _EDGE_DEF_RE = re.compile(
     r"\\(?:draw|path)\s*"
-    r"(?:\[([^\]]*)\])?\s*"       # style options
-    r"\(([\w\d_.-]+)\)\s*"       # source
+    r"(?:\[([^\]]*)\])?\s*"  # style options
+    r"\(([\w\d_.-]+)\)\s*"  # source
     r"("
     r"(?:[-=<>]+(?:\s*\([\w\d_.-]+\)\s*)?)*"  # path ops with intermediate nodes
     r"[-=<>]+"
     r")"
-    r"\s*\(([\w\d_.-]+)\)"       # target
+    r"\s*\(([\w\d_.-]+)\)"  # target
     r"\s*(?:node\[([^\]]*)\]\s*\{([^}]*)\})?\s*"  # optional edge label
     r"\s*;",
     re.DOTALL,
@@ -54,8 +55,8 @@ _MATRIX_RE = re.compile(
     re.DOTALL,
 )
 _PATH_SEG_RE = re.compile(
-    r"\(([\w\d_.-]+)\)\s*"      # node reference
-    r"((?:[-=<>]+)"               # connector
+    r"\(([\w\d_.-]+)\)\s*"  # node reference
+    r"((?:[-=<>]+)"  # connector
     r"(?:\s*\([\w\d_.-]+\)\s*[-=<>]+)*)"  # optional intermediate stops
 )
 _NODE_REF_IN_PATH = re.compile(r"\(([\w\d_.-]+)\)")
@@ -64,13 +65,26 @@ _ARROW_OPTS_RE = re.compile(r"[-=]+>|<[-=]+|<->|=>|<=>")
 
 # Named TikZ colors
 _TIKZ_COLORS: dict[str, str] = {
-    "red": "#ff0000", "green": "#00ff00", "blue": "#0000ff",
-    "cyan": "#00ffff", "magenta": "#ff00ff", "yellow": "#ffff00",
-    "black": "#000000", "white": "#ffffff", "gray": "#808080",
-    "grey": "#808080", "darkgray": "#404040", "lightgray": "#d3d3d3",
-    "brown": "#a52a2a", "lime": "#00ff00", "olive": "#808000",
-    "orange": "#ffa500", "pink": "#ffc0cb", "purple": "#800080",
-    "teal": "#008080", "violet": "#8a2be2",
+    "red": "#ff0000",
+    "green": "#00ff00",
+    "blue": "#0000ff",
+    "cyan": "#00ffff",
+    "magenta": "#ff00ff",
+    "yellow": "#ffff00",
+    "black": "#000000",
+    "white": "#ffffff",
+    "gray": "#808080",
+    "grey": "#808080",
+    "darkgray": "#404040",
+    "lightgray": "#d3d3d3",
+    "brown": "#a52a2a",
+    "lime": "#00ff00",
+    "olive": "#808000",
+    "orange": "#ffa500",
+    "pink": "#ffc0cb",
+    "purple": "#800080",
+    "teal": "#008080",
+    "violet": "#8a2be2",
 }
 
 
@@ -103,9 +117,7 @@ class TikzConverter(DiagramConverter):
         self._ensure_positions(diagram)
         return diagram
 
-    def _process_scopes(
-        self, source: str, global_style: dict[str, Any], diagram: Diagram
-    ) -> str:
+    def _process_scopes(self, source: str, global_style: dict[str, Any], diagram: Diagram) -> str:
         def _replacer(m: re.Match) -> str:
             opts = m.group(1) or ""
             body = m.group(2)
@@ -118,9 +130,7 @@ class TikzConverter(DiagramConverter):
 
         return _SCOPE_RE.sub(_replacer, source)
 
-    def _process_matrix(
-        self, source: str, global_style: dict[str, Any], diagram: Diagram
-    ) -> str:
+    def _process_matrix(self, source: str, global_style: dict[str, Any], diagram: Diagram) -> str:
         def _replacer(m: re.Match) -> str:
             opts = m.group(1) or ""
             name = m.group(2)
@@ -150,9 +160,7 @@ class TikzConverter(DiagramConverter):
 
         return _MATRIX_RE.sub(_replacer, source)
 
-    def _process_nodes(
-        self, source: str, parent_style: dict[str, Any], diagram: Diagram
-    ) -> None:
+    def _process_nodes(self, source: str, parent_style: dict[str, Any], diagram: Diagram) -> None:
         for match in _NODE_DEF_RE.finditer(source):
             opts_str = match.group(1) or ""
             node_id = match.group(2)
@@ -189,9 +197,7 @@ class TikzConverter(DiagramConverter):
                         pass
             diagram.add_node(node)
 
-    def _process_edges(
-        self, source: str, parent_style: dict[str, Any], diagram: Diagram
-    ) -> None:
+    def _process_edges(self, source: str, parent_style: dict[str, Any], diagram: Diagram) -> None:
         for match in _EDGE_DEF_RE.finditer(source):
             opts_str = match.group(1) or ""
             src_id = match.group(2)
@@ -219,9 +225,7 @@ class TikzConverter(DiagramConverter):
             )
             diagram.add_edge(edge)
 
-    def _apply_node_style(
-        self, opts: dict[str, Any]
-    ) -> tuple[ShapeType, Style]:
+    def _apply_node_style(self, opts: dict[str, Any]) -> tuple[ShapeType, Style]:
         shape_type = ShapeType.RECTANGLE
         if opts.get("circle"):
             shape_type = ShapeType.CIRCLE
@@ -246,9 +250,7 @@ class TikzConverter(DiagramConverter):
 
         return shape_type, style
 
-    def _parse_edge_style(
-        self, opts: dict[str, Any]
-    ) -> tuple[EdgeStyle, ArrowStyle, ArrowStyle]:
+    def _parse_edge_style(self, opts: dict[str, Any]) -> tuple[EdgeStyle, ArrowStyle, ArrowStyle]:
         edge_style = EdgeStyle.SOLID
         arrow_start = ArrowStyle.NONE
         arrow_end = ArrowStyle.NONE
@@ -314,16 +316,29 @@ class TikzConverter(DiagramConverter):
                 result[part.lower()] = True
             elif part.lower().startswith("font="):
                 sizes = {
-                    r"\tiny": 8, r"\scriptsize": 9, r"\footnotesize": 10,
-                    r"\small": 11, r"\normalsize": 12, r"\large": 14,
-                    r"\Large": 16, r"\LARGE": 18, r"\huge": 20, r"\Huge": 24,
+                    r"\tiny": 8,
+                    r"\scriptsize": 9,
+                    r"\footnotesize": 10,
+                    r"\small": 11,
+                    r"\normalsize": 12,
+                    r"\large": 14,
+                    r"\Large": 16,
+                    r"\LARGE": 18,
+                    r"\huge": 20,
+                    r"\Huge": 24,
                 }
                 font_val = part.split("=", 1)[1].strip()
                 result["font_size"] = sizes.get(font_val, 12)
-            elif part.lower().startswith("above") or part.lower().startswith("below") \
-                    or part.lower().startswith("left") or part.lower().startswith("right") \
-                    or part.lower().startswith("at ") or part.lower().startswith("midway") \
-                    or part.lower().startswith("sloped") or part.lower() == "auto":
+            elif (
+                part.lower().startswith("above")
+                or part.lower().startswith("below")
+                or part.lower().startswith("left")
+                or part.lower().startswith("right")
+                or part.lower().startswith("at ")
+                or part.lower().startswith("midway")
+                or part.lower().startswith("sloped")
+                or part.lower() == "auto"
+            ):
                 nodes = part.lower().split("=", 1)
                 result[nodes[0]] = nodes[1] if len(nodes) > 1 else True
             elif part.lower().startswith("scale="):
@@ -393,8 +408,7 @@ class TikzConverter(DiagramConverter):
         remaining = set(deps.keys())
         while remaining:
             layer = [
-                n for n in remaining
-                if not any(t in remaining and t != n for t in deps.get(n, []))
+                n for n in remaining if not any(t in remaining and t != n for t in deps.get(n, []))
             ]
             if not layer:
                 layer = [remaining.pop()]
@@ -411,12 +425,9 @@ class TikzConverter(DiagramConverter):
                     )
 
         from pidraw.core.models import Viewport
-        positions = [
-            n.position for n in nodes if n.position
-        ]
-        sizes = [
-            n.size for n in nodes if n.size and n.position
-        ]
+
+        positions = [n.position for n in nodes if n.position]
+        sizes = [n.size for n in nodes if n.size and n.position]
         if positions and sizes:
             min_x = min(p.x for p in positions)
             min_y = min(p.y for p in positions)

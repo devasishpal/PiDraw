@@ -44,19 +44,11 @@ def compute_shape_path(
 
     if shape_type == ShapeType.CIRCLE:
         r = min(w, h) / 2
-        return (
-            f"M{cx},{cy - r}"
-            f"a{r},{r} 0 1 1 0,{2 * r}"
-            f"a{r},{r} 0 1 1 0,-{2 * r}z"
-        )
+        return f"M{cx},{cy - r}a{r},{r} 0 1 1 0,{2 * r}a{r},{r} 0 1 1 0,-{2 * r}z"
 
     if shape_type == ShapeType.DOUBLE_CIRCLE:
         r = min(w, h) / 2
-        outer = (
-            f"M{cx},{cy - r}"
-            f"a{r},{r} 0 1 1 0,{2 * r}"
-            f"a{r},{r} 0 1 1 0,-{2 * r}z"
-        )
+        outer = f"M{cx},{cy - r}a{r},{r} 0 1 1 0,{2 * r}a{r},{r} 0 1 1 0,-{2 * r}z"
         inner_r = r * 0.75
         inner = (
             f"M{cx},{cy - inner_r}"
@@ -67,28 +59,14 @@ def compute_shape_path(
 
     if shape_type == ShapeType.ELLIPSE:
         rx, ry = w / 2, h / 2
-        return (
-            f"M{cx},{cy - ry}"
-            f"a{rx},{ry} 0 1 1 0,{2 * ry}"
-            f"a{rx},{ry} 0 1 1 0,-{2 * ry}z"
-        )
+        return f"M{cx},{cy - ry}a{rx},{ry} 0 1 1 0,{2 * ry}a{rx},{ry} 0 1 1 0,-{2 * ry}z"
 
     if shape_type == ShapeType.DIAMOND:
-        return (
-            f"M{cx},{y}"
-            f"L{x + w},{cy}"
-            f"L{cx},{y + h}"
-            f"L{x},{cy}z"
-        )
+        return f"M{cx},{y}L{x + w},{cy}L{cx},{y + h}L{x},{cy}z"
 
     if shape_type == ShapeType.PARALLELOGRAM:
         skew = w * 0.2
-        return (
-            f"M{x + skew},{y}"
-            f"L{x + w},{y}"
-            f"L{x + w - skew},{y + h}"
-            f"L{x},{y + h}z"
-        )
+        return f"M{x + skew},{y}L{x + w},{y}L{x + w - skew},{y + h}L{x},{y + h}z"
 
     if shape_type == ShapeType.HEXAGON:
         sx = w * 0.25

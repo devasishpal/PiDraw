@@ -145,9 +145,7 @@ def optimize_svg(
 
     original_bytes = len(svg.encode("utf-8"))
 
-    pass_list: list[str | PassFunction] = (
-        list(DEFAULT_PASSES) if passes is None else list(passes)
-    )
+    pass_list: list[str | PassFunction] = list(DEFAULT_PASSES) if passes is None else list(passes)
     resolved = _resolve_passes(pass_list)
 
     current = svg

@@ -18,20 +18,20 @@ from pidraw.core.models import (
 
 _NODE_STMT = re.compile(
     r'(\w[\w\d_]*|"[^"]*")\s*'
-    r'(?:\[([^\]]*)\])?'
-    r'\s*;?'
+    r"(?:\[([^\]]*)\])?"
+    r"\s*;?"
 )
 
 _EDGE_STMT = re.compile(
     r'(\w[\w\d_]*|"[^"]*")\s*'
-    r'(--|->)\s*'
+    r"(--|->)\s*"
     r'(\w[\w\d_]*|"[^"]*")'
-    r'(?:\s*\[([^\]]*)\])?'
-    r'\s*;?'
+    r"(?:\s*\[([^\]]*)\])?"
+    r"\s*;?"
 )
 
 _ATTR = re.compile(r'(\w+)\s*=\s*"([^"]*)"|(\w+)\s*=\s*(\S+)')
-_BRACES = re.compile(r'\{(.*)\}', re.DOTALL)
+_BRACES = re.compile(r"\{(.*)\}", re.DOTALL)
 
 _SHAPE_MAP: dict[str, ShapeType] = {
     "box": ShapeType.RECTANGLE,
@@ -58,7 +58,9 @@ class GraphvizConverter(DiagramConverter):
 
     def parse(self, source: str) -> Diagram:
         diagram = Diagram(id="graphviz_diagram", title="Graphviz Diagram")
-        diagram.layout = Layout(layout_type=LayoutType.LAYERED, direction="TB", node_spacing=50, layer_spacing=70)
+        diagram.layout = Layout(
+            layout_type=LayoutType.LAYERED, direction="TB", node_spacing=50, layer_spacing=70
+        )
 
         direction = "TB"
         default_node_shape = ShapeType.ELLIPSE
@@ -71,14 +73,14 @@ class GraphvizConverter(DiagramConverter):
             direction = rankdir_m.group(1).upper()
 
         # Split into statements by semicolon or newline
-        stmts = re.split(r'[;\n]+', body)
+        stmts = re.split(r"[;\n]+", body)
 
         for stmt in stmts:
             stmt = stmt.strip()
             if not stmt or stmt.startswith("//") or stmt.startswith("#"):
                 continue
 
-            if re.match(r'^(subgraph|node|edge|graph)\b', stmt, re.IGNORECASE):
+            if re.match(r"^(subgraph|node|edge|graph)\b", stmt, re.IGNORECASE):
                 continue
 
             edge_match = _EDGE_STMT.match(stmt)

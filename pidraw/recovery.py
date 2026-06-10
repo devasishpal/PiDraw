@@ -21,7 +21,7 @@ def render_with_retry(
     max_retries: int = 2,
     retry_delay: float = 0.5,
     backoff: float = 2.0,
-        fallback_renderer: Callable[..., str | bytes] | None = None,
+    fallback_renderer: Callable[..., str | bytes] | None = None,
 ) -> str | bytes:
     """Render a diagram with automatic retry and fallback.
 
@@ -61,7 +61,7 @@ def render_with_retry(
         except PiDrawError as exc:
             last_exception = exc
             if attempt < max_retries:
-                delay = retry_delay * (backoff ** attempt)
+                delay = retry_delay * (backoff**attempt)
                 time.sleep(delay)
 
     # Fallback
@@ -104,6 +104,7 @@ def safe_render(
     """
     if render_func is None:
         from pidraw.renderer import render as _render
+
         render_func = _render
 
     try:
@@ -121,7 +122,7 @@ def _error_svg(message: str) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100">'
         f'<rect width="100%" height="100%" fill="#fff5f5" stroke="#e00" stroke-width="2"/>'
         f'<text x="20" y="40" font-family="monospace" font-size="14" fill="#c00">'
-        f'Rendering Error: {safe_msg}'
-        f'</text>'
-        f'</svg>'
+        f"Rendering Error: {safe_msg}"
+        f"</text>"
+        f"</svg>"
     )

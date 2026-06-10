@@ -1,4 +1,5 @@
 """Renderer for Excalidraw diagrams — parses JSON and renders SVG natively."""
+
 from __future__ import annotations
 
 import json
@@ -47,11 +48,11 @@ def _render_element(elem: dict[str, Any]) -> str:
         cx = x + w / 2
         cy = y + h / 2
         parts.append(
-            f'<ellipse cx="{cx}" cy="{cy}" rx="{w/2}" ry="{h/2}" '
+            f'<ellipse cx="{cx}" cy="{cy}" rx="{w / 2}" ry="{h / 2}" '
             f'stroke="{sc}" stroke-width="{sw}" fill="{fill}" opacity="{opacity}"/>'
         )
     elif t == "diamond":
-        pts = f"{x+w/2},{y} {x+w},{y+h/2} {x+w/2},{y+h} {x},{y+h/2}"
+        pts = f"{x + w / 2},{y} {x + w},{y + h / 2} {x + w / 2},{y + h} {x},{y + h / 2}"
         parts.append(
             f'<polygon points="{pts}" '
             f'stroke="{sc}" stroke-width="{sw}" fill="{fill}" opacity="{opacity}"/>'
@@ -70,10 +71,7 @@ def _render_element(elem: dict[str, Any]) -> str:
         if not pts or len(pts) < 2:
             pts = [[0, 0], [w, h]]
         abs_pts = [(x + p[0], y + p[1]) for p in pts]
-        d = " ".join(
-            f"{'M' if i==0 else 'L'}{px},{py}"
-            for i, (px, py) in enumerate(abs_pts)
-        )
+        d = " ".join(f"{'M' if i == 0 else 'L'}{px},{py}" for i, (px, py) in enumerate(abs_pts))
         marker_end = ""
         if t == "arrow":
             marker_end = ' marker-end="url(#arrowhead)"'
@@ -85,10 +83,7 @@ def _render_element(elem: dict[str, Any]) -> str:
         pts = elem.get("points", [])
         if pts and len(pts) >= 2:
             abs_pts = [(x + p[0], y + p[1]) for p in pts]
-            d = " ".join(
-                f"{'M' if i==0 else 'L'}{px},{py}"
-                for i, (px, py) in enumerate(abs_pts)
-            )
+            d = " ".join(f"{'M' if i == 0 else 'L'}{px},{py}" for i, (px, py) in enumerate(abs_pts))
             parts.append(
                 f'<path d="{d}" stroke="{sc}" stroke-width="{max(sw, 1)}" '
                 f'fill="none" opacity="{opacity}"/>'
@@ -98,7 +93,7 @@ def _render_element(elem: dict[str, Any]) -> str:
             f'<rect x="{x}" y="{y}" width="{w}" height="{h}" '
             f'fill="#e0e0e0" stroke="{sc}" stroke-width="{sw}" '
             f'stroke-dasharray="4,2" opacity="{opacity}"/>'
-            f'<text x="{x + w/2}" y="{y + h/2}" '
+            f'<text x="{x + w / 2}" y="{y + h / 2}" '
             f'text-anchor="middle" fill="#999" font-size="10">[image]</text>'
         )
     elif t in ("frame", "embeddable"):
@@ -114,22 +109,13 @@ def _render_element(elem: dict[str, Any]) -> str:
         cx = x + w / 2
         cy = y + h / 2
         deg = math.degrees(angle)
-        parts = [
-            f'<g transform="rotate({deg:.1f},{cx},{cy})">'
-            + "".join(parts)
-            + "</g>"
-        ]
+        parts = [f'<g transform="rotate({deg:.1f},{cx},{cy})">' + "".join(parts) + "</g>"]
 
     return "".join(parts)
 
 
 def _escape(t: str) -> str:
-    return (
-        t.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 class ExcalidrawRenderer(BaseRenderer):
@@ -154,9 +140,7 @@ class ExcalidrawRenderer(BaseRenderer):
         try:
             data = json.loads(source)
         except json.JSONDecodeError as exc:
-            raise RenderError(
-                "excalidraw", f"Excalidraw source is not valid JSON: {exc}"
-            )
+            raise RenderError("excalidraw", f"Excalidraw source is not valid JSON: {exc}")
 
         elements = data if isinstance(data, list) else data.get("elements", [])
 
@@ -186,12 +170,12 @@ class ExcalidrawRenderer(BaseRenderer):
             f'viewBox="{min_x - pad} {min_y - pad} {vw} {vh}" '
             f'width="{vw}" height="{vh}" '
             f'style="background:#ffffff">'
-            '<defs>'
+            "<defs>"
             '<marker id="arrowhead" markerWidth="10" markerHeight="10" '
             'refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">'
             '<path d="M0,0 L10,5 L0,10 Z" fill="#000" stroke="#000" stroke-width="1"/>'
-            '</marker>'
-            '</defs>'
+            "</marker>"
+            "</defs>"
         ]
 
         # Per-element try/except — a single bad element must not abort the whole render
@@ -199,9 +183,7 @@ class ExcalidrawRenderer(BaseRenderer):
             try:
                 svg_parts.append(_render_element(el))
             except Exception as exc:
-                svg_parts.append(
-                    f'<!-- excalidraw element {i} skipped: {_escape(str(exc))} -->'
-                )
+                svg_parts.append(f"<!-- excalidraw element {i} skipped: {_escape(str(exc))} -->")
 
         svg_parts.append("</svg>")
         svg = "".join(svg_parts)

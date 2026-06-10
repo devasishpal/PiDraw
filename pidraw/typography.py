@@ -98,7 +98,9 @@ def _get_avg_char_width(
     return width
 
 
-def wrap_text(text: str, max_width: float, font_size: float = 14.0, font_family: str = "sans-serif") -> list[str]:
+def wrap_text(
+    text: str, max_width: float, font_size: float = 14.0, font_family: str = "sans-serif"
+) -> list[str]:
     char_width = _get_avg_char_width(font_family, font_size, FontWeight.NORMAL)
     max_chars = max(1, int(max_width / char_width))
 

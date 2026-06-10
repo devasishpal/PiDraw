@@ -1,4 +1,5 @@
 """Tests for RenderResult dataclass."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -70,10 +71,17 @@ class TestRenderResult:
 
     def test_fields_order(self) -> None:
         import dataclasses
+
         fields = [f.name for f in dataclasses.fields(RenderResult)]
         assert fields == [
-            "svg", "png", "language", "engine_used",
-            "render_time_ms", "warnings", "cache_hit", "source_hash",
+            "svg",
+            "png",
+            "language",
+            "engine_used",
+            "render_time_ms",
+            "warnings",
+            "cache_hit",
+            "source_hash",
         ]
 
     def test_mutable_warnings(self) -> None:

@@ -1,4 +1,5 @@
 """Renderer for WaveDrom timing diagrams — tries CLI first, falls back to native."""
+
 from __future__ import annotations
 
 import os
@@ -28,6 +29,7 @@ class WaveDromRenderer(BaseRenderer):
         self._native = None
         if not self._resolved:
             from pidraw.engines.wavedrom_native import WaveDromNativeRenderer
+
             self._native = WaveDromNativeRenderer()
 
     @staticmethod
@@ -55,7 +57,9 @@ class WaveDromRenderer(BaseRenderer):
             assert self._resolved is not None
             result = subprocess.run(
                 [self._resolved, "-i", input_path, "-s", output_path],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode != 0:
                 raise RenderError(
@@ -71,6 +75,7 @@ class WaveDromRenderer(BaseRenderer):
             if "<svg" not in svg:
                 raise RenderError("wavedrom", "wavedrom-cli output does not contain <svg>")
             import xml.etree.ElementTree as ET
+
             try:
                 ET.fromstring(svg)
             except ET.ParseError as exc:
@@ -85,4 +90,5 @@ class WaveDromRenderer(BaseRenderer):
         finally:
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh
+
                 sh.rmtree(tmp_dir, ignore_errors=True)

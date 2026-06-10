@@ -1,4 +1,5 @@
 """D2 renderer powered by the official ``d2`` command-line tool."""
+
 from __future__ import annotations
 
 import os
@@ -64,9 +65,7 @@ class D2Renderer(BaseRenderer):
         if not source.strip():
             raise RenderError("d2", "D2 source is empty")
         if len(source) > _MAX_INPUT_SIZE:
-            raise RenderError(
-                "d2", f"D2 source exceeds maximum size of {_MAX_INPUT_SIZE} bytes"
-            )
+            raise RenderError("d2", f"D2 source exceeds maximum size of {_MAX_INPUT_SIZE} bytes")
         if "\x00" in source:
             raise RenderError("d2", "D2 source contains null bytes")
 
@@ -75,9 +74,7 @@ class D2Renderer(BaseRenderer):
         if not svg:
             raise RenderError("d2", "D2 produced an empty SVG")
         if not _SVG_ROOT_RE.search(svg):
-            raise RenderError(
-                "d2", "D2 output does not contain a valid <svg> root element"
-            )
+            raise RenderError("d2", "D2 output does not contain a valid <svg> root element")
         try:
             ET.fromstring(svg)
         except ET.ParseError as exc:
@@ -148,9 +145,7 @@ class D2Renderer(BaseRenderer):
 
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="replace").strip()
-            raise RenderError(
-                "d2", f"D2 exited with code {result.returncode}", stderr=stderr
-            )
+            raise RenderError("d2", f"D2 exited with code {result.returncode}", stderr=stderr)
 
     @staticmethod
     def _cleanup(tmp_dir: Optional[str]) -> None:

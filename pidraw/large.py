@@ -73,6 +73,7 @@ def render_large_file(
     """
     if render_func is None:
         from pidraw.renderer import render as _default_render
+
         render_func = _default_render
 
     size = os.path.getsize(file_path)
@@ -86,6 +87,7 @@ def render_large_file(
 
     if optimize and isinstance(svg, str):
         from pidraw.optimizer import optimize_svg
+
         result = optimize_svg(svg)
         svg = result.svg
 
@@ -122,6 +124,7 @@ def _render_via_tempfile(
     # in the first chunk anyway
     if language is None:
         from pidraw.detector import detect
+
         language = detect(source)
 
     with open(file_path, "r", encoding="utf-8-sig", errors="replace") as f:

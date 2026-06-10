@@ -110,14 +110,14 @@ _FORMATS: list[FormatInfo] = [
     FormatInfo(
         language="excalidraw",
         label="Excalidraw",
-        extensions=[".json",".excalidraw"],
+        extensions=[".json", ".excalidraw"],
         description="Hand-drawn style whiteboard diagrams",
         cli_tool="excalidraw",
     ),
     FormatInfo(
         language="kroki",
         label="Kroki",
-        extensions=[".txt",".kroki"],
+        extensions=[".txt", ".kroki"],
         description="Universal diagram API (proxies to many backends)",
         cli_tool="",
         notes="HTTP API; no local CLI required",
@@ -141,9 +141,7 @@ def format_table() -> str:
     for fmt in _FORMATS:
         ext_str = ", ".join(fmt.extensions)
         cli = fmt.cli_tool or "(built-in)"
-        lines.append(
-            f"{fmt.language:<16} {ext_str:<24} {cli:<30} {fmt.description}"
-        )
+        lines.append(f"{fmt.language:<16} {ext_str:<24} {cli:<30} {fmt.description}")
     return "\n".join(lines)
 
 
@@ -157,7 +155,7 @@ def _get_cli_tool_name(cli_tool: str) -> str | None:
 
 # Possible CLI tool names per format (renderers may search multiple names)
 _CLI_SEARCH_ORDER: dict[str, list[str]] = {
-    "bpmn":        ["bpmn-to-svg", "bpmn-svg"],
+    "bpmn": ["bpmn-to-svg", "bpmn-svg"],
     "structurizr": ["structurizr-cli", "structurizr"],
 }
 

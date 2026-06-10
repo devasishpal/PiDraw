@@ -103,7 +103,9 @@ def render(
 def docs(
     file: str = typer.Argument(..., help="Markdown file with diagram blocks"),
     output: Optional[str] = _output_opt,
-    output_format: str = typer.Option("html", "--output-format", help="Output format (html, md, or docx)"),
+    output_format: str = typer.Option(
+        "html", "--output-format", help="Output format (html, md, or docx)"
+    ),
     format: str = _format_opt,
     no_bg: bool = typer.Option(False, "--no-bg", help="Remove background from rendered diagrams"),
     quiet: bool = _quiet_opt,

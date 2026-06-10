@@ -110,9 +110,7 @@ def discover_plugins() -> dict[str, "BaseRenderer"]:
                 cls = ep.load()
                 instance = cls() if isinstance(cls, type) else cls
                 if not isinstance(instance, _BaseRenderer):
-                    raise PluginError(
-                        f"Plugin '{ep.name}' is not a BaseRenderer instance"
-                    )
+                    raise PluginError(f"Plugin '{ep.name}' is not a BaseRenderer instance")
                 discovered[ep.name] = instance
             except Exception as exc:
                 raise PluginError(f"Failed to load plugin '{ep.name}': {exc}") from exc

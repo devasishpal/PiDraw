@@ -1,4 +1,5 @@
 """Render all diagram files in pidraw_test dir."""
+
 import glob
 import os
 from pathlib import Path
@@ -9,10 +10,19 @@ from pidraw.backend.png import svg_to_png
 out = Path(r"C:\Users\Alok\Desktop\pidraw_test")
 os.chdir(str(out))
 
-files = sorted(glob.glob("*.mmd") + glob.glob("*.puml") + glob.glob("*.dot") +
-               glob.glob("*.d2") + glob.glob("*.txt") + glob.glob("*.md") +
-               glob.glob("*.noml") + glob.glob("*.json") + glob.glob("*.dsl") +
-               glob.glob("*.bpmn") + glob.glob("*.tex"))
+files = sorted(
+    glob.glob("*.mmd")
+    + glob.glob("*.puml")
+    + glob.glob("*.dot")
+    + glob.glob("*.d2")
+    + glob.glob("*.txt")
+    + glob.glob("*.md")
+    + glob.glob("*.noml")
+    + glob.glob("*.json")
+    + glob.glob("*.dsl")
+    + glob.glob("*.bpmn")
+    + glob.glob("*.tex")
+)
 
 print(f"Found {len(files)} diagram files\n")
 

@@ -50,8 +50,7 @@ class RenderResult:
         if p.suffix.lower() == ".png":
             if self.png is None:
                 raise ValueError(
-                    "No PNG data in this RenderResult. "
-                    "Re-render with output_format='png'."
+                    "No PNG data in this RenderResult. Re-render with output_format='png'."
                 )
             p.write_bytes(self.png)
         else:

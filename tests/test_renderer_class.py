@@ -1,4 +1,5 @@
 """Tests for the Renderer class."""
+
 from __future__ import annotations
 
 from typing import Any, Generator
@@ -52,7 +53,7 @@ class TestRendererRender:
 
         with patch.object(mermaid, "_run_mmdc", return_value=self.SVG_OUTPUT):
             result = r.render("graph TD; A-->B;")
-            assert '<svg' in result.svg
+            assert "<svg" in result.svg
 
     def test_render_with_explicit_language(self) -> None:
         r = Renderer()
@@ -61,7 +62,7 @@ class TestRendererRender:
 
         with patch.object(mermaid, "_run_mmdc", return_value=self.SVG_OUTPUT):
             result = r.render("graph TD; A-->B;", language="mermaid")
-            assert '<svg' in result.svg
+            assert "<svg" in result.svg
 
     def test_render_file(self, tmp_path: Any) -> None:
         r = Renderer()
@@ -75,7 +76,7 @@ class TestRendererRender:
 
         with patch.object(mermaid, "_run_mmdc", return_value=self.SVG_OUTPUT):
             result = r.render_file(str(f))
-            assert '<svg' in result.svg
+            assert "<svg" in result.svg
 
     def test_render_unknown_language(self) -> None:
         r = Renderer()

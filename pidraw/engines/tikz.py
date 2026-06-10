@@ -1,4 +1,5 @@
 """Renderer for TikZ diagrams via pdflatex + pdf2svg or native fallback."""
+
 from __future__ import annotations
 
 import os
@@ -64,9 +65,16 @@ class TikzRenderer(BaseRenderer):
 
             assert self._pdflatex is not None
             result = subprocess.run(
-                [self._pdflatex, "-interaction=nonstopmode",
-                 "-output-directory", tmp_dir, tex_path],
-                capture_output=True, text=True, timeout=60,
+                [
+                    self._pdflatex,
+                    "-interaction=nonstopmode",
+                    "-output-directory",
+                    tmp_dir,
+                    tex_path,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
             )
             if result.returncode != 0:
                 log = result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout
@@ -75,7 +83,9 @@ class TikzRenderer(BaseRenderer):
             if self._pdf2svg:
                 svg_result = subprocess.run(
                     [self._pdf2svg, pdf_path, svg_path],
-                    capture_output=True, text=True, timeout=30,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
                 )
                 if svg_result.returncode != 0:
                     raise RenderError(
@@ -87,7 +97,9 @@ class TikzRenderer(BaseRenderer):
                 if os.path.isfile(dvi_path):
                     svg_result = subprocess.run(
                         [self._dvisvgm, "--no-fonts", dvi_path, "-o", svg_path],
-                        capture_output=True, text=True, timeout=30,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
                     )
                     if svg_result.returncode != 0:
                         raise RenderError(
@@ -109,6 +121,7 @@ class TikzRenderer(BaseRenderer):
                 raise RenderError("tikz", "TikZ output does not contain <svg>")
 
             import xml.etree.ElementTree as ET
+
             try:
                 ET.fromstring(svg)
             except ET.ParseError as exc:
@@ -124,6 +137,7 @@ class TikzRenderer(BaseRenderer):
         finally:
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh
+
                 sh.rmtree(tmp_dir, ignore_errors=True)
 
     def _run_native(self, source: str) -> str:

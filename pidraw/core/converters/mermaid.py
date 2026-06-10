@@ -22,24 +22,24 @@ from pidraw.core.models import (
 )
 
 _NODE_PATTERN = re.compile(
-    r"(\w[\w\d_]*)"           # id
-    r"(?:\[([^\]]*)\])?"       # [label] rectangle
-    r"(?:\{([^}]*)\})?"        # {label} rhombus
-    r"(?:\(([^)]*)\))?"        # (label) rounded rect
-    r"(?:\"([^\"]*)\")?"       # "label"
-    r'(?:\<\[([^\]]*)\]\>)?'   # <[label]> hexagon
-    r'(?:\(\(([^)]*)\)\))?'    # ((label)) circle
-    r"(?:\>([^>]*)\]?)?"       # >label] async
+    r"(\w[\w\d_]*)"  # id
+    r"(?:\[([^\]]*)\])?"  # [label] rectangle
+    r"(?:\{([^}]*)\})?"  # {label} rhombus
+    r"(?:\(([^)]*)\))?"  # (label) rounded rect
+    r"(?:\"([^\"]*)\")?"  # "label"
+    r"(?:\<\[([^\]]*)\]\>)?"  # <[label]> hexagon
+    r"(?:\(\(([^)]*)\)\))?"  # ((label)) circle
+    r"(?:\>([^>]*)\]?)?"  # >label] async
 )
 
 _EDGE_PATTERN = re.compile(
-    r"(\w[\w\d_]*)"                      # source
+    r"(\w[\w\d_]*)"  # source
     r"(?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|\(\([^)]*\)\)|<\[[^\]]*\]>)?\s*"  # optional node shape
     r"((?:[-=.]*[-=>]+|<-[-=.]*|<-|->|<->|==|--)[-\.=]*[-=>]*)"  # arrow
-    r"\s*"                               # space
-    r"(?:\|(?:[^|]*)\|)?"               # optional edge label |...|
-    r"\s*"                               # space
-    r"(\w[\w\d_]*)"                      # target
+    r"\s*"  # space
+    r"(?:\|(?:[^|]*)\|)?"  # optional edge label |...|
+    r"\s*"  # space
+    r"(\w[\w\d_]*)"  # target
     r"(?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|\(\([^)]*\)\)|<\[[^\]]*\]>)?"  # optional node shape
 )
 
@@ -104,8 +104,14 @@ class MermaidConverter(DiagramConverter):
 
         for line in lines:
             line = line.strip()
-            if not line or line.startswith("%%") or re.match(
-                r"^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram)", line, re.IGNORECASE
+            if (
+                not line
+                or line.startswith("%%")
+                or re.match(
+                    r"^(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram)",
+                    line,
+                    re.IGNORECASE,
+                )
             ):
                 continue
             if line.startswith("subgraph ") or line.startswith("end"):
@@ -132,7 +138,7 @@ class MermaidConverter(DiagramConverter):
                 for nid in (src_id, tgt_id):
                     idx = line.find(nid)
                     if idx >= 0:
-                        remainder = line[idx + len(nid):]
+                        remainder = line[idx + len(nid) :]
                         shape_type, label_text = self._parse_node_decoration(remainder)
                         if not label_text:
                             label_text = nid
@@ -141,6 +147,7 @@ class MermaidConverter(DiagramConverter):
 
                     if nid not in diagram.nodes:
                         from pidraw.core.shapes import compute_shape_size
+
                         sz = compute_shape_size(shape_type, label_text)
                         node = Node(
                             id=nid,
@@ -196,6 +203,7 @@ class MermaidConverter(DiagramConverter):
 
                 if nid not in diagram.nodes:
                     from pidraw.core.shapes import compute_shape_size
+
                     sz = compute_shape_size(shape_type, label_text)
                     node = Node(
                         id=nid,
@@ -235,7 +243,9 @@ class MermaidConverter(DiagramConverter):
             if line.lower().startswith("sequencediagram"):
                 continue
 
-            pl = re.match(r"^(participant|actor)\s+([\w\d_]+)(?:\s+as\s+([\w\d_]+))?", line, re.IGNORECASE)
+            pl = re.match(
+                r"^(participant|actor)\s+([\w\d_]+)(?:\s+as\s+([\w\d_]+))?", line, re.IGNORECASE
+            )
             if pl:
                 role = pl.group(1).lower()
                 p_id = pl.group(2)
@@ -457,7 +467,9 @@ class MermaidConverter(DiagramConverter):
                             label=Label(text=""),
                             shape=Shape(shape_type=ShapeType.DOUBLE_CIRCLE),
                             size=Size(width=24, height=24),
-                            style=Style(fill_color="#ffffff", stroke_color="#333333", stroke_width=2),
+                            style=Style(
+                                fill_color="#ffffff", stroke_color="#333333", stroke_width=2
+                            ),
                         )
                         diagram.add_node(node)
 
@@ -583,7 +595,7 @@ class MermaidConverter(DiagramConverter):
 
             pm = re.match(r'"([^"]{2,})"\s*:\s*([\d.]+)', line)
             if not pm:
-                pm = re.match(r'([\w\s]+)\s*:\s*([\d.]+)', line)
+                pm = re.match(r"([\w\s]+)\s*:\s*([\d.]+)", line)
             if pm:
                 label = pm.group(1).strip()
                 val = float(pm.group(2))
@@ -594,8 +606,16 @@ class MermaidConverter(DiagramConverter):
             return diagram
 
         cx, cy, r = 200, 200, 150
-        colors = ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0",
-                  "#9966ff", "#ff9f40", "#c9cbcf", "#ff6384"]
+        colors = [
+            "#ff6384",
+            "#36a2eb",
+            "#ffce56",
+            "#4bc0c0",
+            "#9966ff",
+            "#ff9f40",
+            "#c9cbcf",
+            "#ff6384",
+        ]
         start_angle = 0.0
 
         center_id = "pie_center"
@@ -787,7 +807,9 @@ class MermaidConverter(DiagramConverter):
         remaining = set(deps.keys())
 
         while remaining:
-            layer = [n for n in remaining if not any(t in remaining and t != n for t in deps.get(n, []))]
+            layer = [
+                n for n in remaining if not any(t in remaining and t != n for t in deps.get(n, []))
+            ]
             if not layer:
                 layer = [remaining.pop()]
             layers.append(layer)
@@ -808,12 +830,17 @@ class MermaidConverter(DiagramConverter):
             if positioned:
                 min_x = min((n.position.x for n in positioned), default=0)
                 min_y = min((n.position.y for n in positioned), default=0)
-                max_x = max((n.position.x + n.size.width for n in positioned if n.size), default=800)
-                max_y = max((n.position.y + n.size.height for n in positioned if n.size), default=600)
+                max_x = max(
+                    (n.position.x + n.size.width for n in positioned if n.size), default=800
+                )
+                max_y = max(
+                    (n.position.y + n.size.height for n in positioned if n.size), default=600
+                )
                 cw = max_x - min_x
                 ch = max_y - min_y
                 pad = max(layout.padding * 2, cw * 0.15, ch * 0.15)
                 from pidraw.core.models import Viewport
+
                 diagram.viewport = Viewport(
                     x=min_x - pad,
                     y=min_y - pad,

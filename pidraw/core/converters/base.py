@@ -11,6 +11,7 @@ def register_converter(language: str):
     def decorator(cls: type[DiagramConverter]) -> type[DiagramConverter]:
         converter_registry[language.lower()] = cls
         return cls
+
     return decorator
 
 
@@ -18,8 +19,7 @@ class DiagramConverter(ABC):
     language: str = ""
 
     @abstractmethod
-    def parse(self, source: str) -> Diagram:
-        ...
+    def parse(self, source: str) -> Diagram: ...
 
     def detect(self, source: str) -> float:
         return 0.0

@@ -12,7 +12,9 @@ class TestComputeShapePath:
         assert "v50" in path
 
     def test_rounded_rectangle(self) -> None:
-        path = compute_shape_path(ShapeType.ROUNDED_RECTANGLE, Position(0, 0), Size(100, 50), corner_radius=5)
+        path = compute_shape_path(
+            ShapeType.ROUNDED_RECTANGLE, Position(0, 0), Size(100, 50), corner_radius=5
+        )
         assert "a" in path
 
     def test_circle(self) -> None:

@@ -21,27 +21,33 @@ from pidraw.core.models import (
 def _simple_diagram() -> Diagram:
     d = Diagram(id="test", viewport=Viewport(400, 300))
     d.layout = Layout(layout_type=LayoutType.NONE)
-    d.add_node(Node(
-        id="a",
-        label=Label(text="Node A"),
-        shape=Shape(shape_type=ShapeType.RECTANGLE),
-        position=Position(20, 20),
-        size=Size(120, 50),
-    ))
-    d.add_node(Node(
-        id="b",
-        label=Label(text="Node B"),
-        shape=Shape(shape_type=ShapeType.ROUNDED_RECTANGLE),
-        position=Position(200, 100),
-        size=Size(140, 60),
-    ))
-    d.add_edge(Edge(
-        id="a->b",
-        source="a",
-        target="b",
-        label=Label(text="connects"),
-        style=Style(arrow_end=ArrowStyle.TRIANGLE_FILLED),
-    ))
+    d.add_node(
+        Node(
+            id="a",
+            label=Label(text="Node A"),
+            shape=Shape(shape_type=ShapeType.RECTANGLE),
+            position=Position(20, 20),
+            size=Size(120, 50),
+        )
+    )
+    d.add_node(
+        Node(
+            id="b",
+            label=Label(text="Node B"),
+            shape=Shape(shape_type=ShapeType.ROUNDED_RECTANGLE),
+            position=Position(200, 100),
+            size=Size(140, 60),
+        )
+    )
+    d.add_edge(
+        Edge(
+            id="a->b",
+            source="a",
+            target="b",
+            label=Label(text="connects"),
+            style=Style(arrow_end=ArrowStyle.TRIANGLE_FILLED),
+        )
+    )
     return d
 
 
@@ -95,26 +101,30 @@ class TestSvgBackend:
     def test_diamond_node(self) -> None:
         backend = SvgBackend()
         d = Diagram(id="d", viewport=Viewport(200, 200))
-        d.add_node(Node(
-            id="d1",
-            label=Label(text="Diamond"),
-            shape=Shape(shape_type=ShapeType.DIAMOND),
-            position=Position(50, 50),
-            size=Size(100, 80),
-        ))
+        d.add_node(
+            Node(
+                id="d1",
+                label=Label(text="Diamond"),
+                shape=Shape(shape_type=ShapeType.DIAMOND),
+                position=Position(50, 50),
+                size=Size(100, 80),
+            )
+        )
         svg = backend.render(d)
         assert "Diamond" in svg
 
     def test_render_with_shadow(self) -> None:
         backend = SvgBackend()
         d = Diagram(id="s", viewport=Viewport(200, 200))
-        d.add_node(Node(
-            id="s1",
-            label=Label(text="Shadow"),
-            shape=Shape(shape_type=ShapeType.RECTANGLE),
-            position=Position(30, 30),
-            size=Size(100, 50),
-            style=Style(shadow=True),
-        ))
+        d.add_node(
+            Node(
+                id="s1",
+                label=Label(text="Shadow"),
+                shape=Shape(shape_type=ShapeType.RECTANGLE),
+                position=Position(30, 30),
+                size=Size(100, 50),
+                style=Style(shadow=True),
+            )
+        )
         svg = backend.render(d)
         assert "<svg" in svg

@@ -1,4 +1,5 @@
 """Tests for the Graphviz dot-based renderer."""
+
 from __future__ import annotations
 
 import subprocess
@@ -71,10 +72,12 @@ class TestOutputValidation:
 
 
 def _completed(
-    returncode: int = 0, stderr: str = "",
+    returncode: int = 0,
+    stderr: str = "",
 ) -> subprocess.CompletedProcess[bytes]:
     return subprocess.CompletedProcess(
-        args=["dot"], returncode=returncode,
+        args=["dot"],
+        returncode=returncode,
         stdout=b"<svg xmlns='http://www.w3.org/2000/svg'></svg>",
         stderr=stderr.encode("utf-8"),
     )
@@ -136,6 +139,7 @@ class TestAutoRegistration:
         clear_registry()
         register_renderer("graphviz", GraphvizRenderer(dot_path="/fake/dot"))
         from pidraw.registry import get_renderer
+
         r = get_renderer("graphviz")
         assert isinstance(r, GraphvizRenderer)
 
@@ -146,6 +150,7 @@ class TestAutoRegistration:
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
         with patch.object(r, "_run_dot", return_value=fake_svg):
             from pidraw.renderer import render as public_render
+
             result = public_render("digraph { A -> B }")
             assert result.svg == fake_svg
 
@@ -156,6 +161,7 @@ class TestAutoRegistration:
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
         with patch.object(r, "_run_dot", return_value=fake_svg):
             from pidraw.renderer import render as public_render
+
             for source in [
                 "digraph G { A -> B }",
                 "graph G { A -- B }",

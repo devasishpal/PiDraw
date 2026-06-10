@@ -61,7 +61,9 @@ class NomnomlRenderer(BaseRenderer):
             assert self._resolved is not None
             result = subprocess.run(
                 [self._resolved, input_path, output_path],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode != 0:
                 raise RenderError(
@@ -77,6 +79,7 @@ class NomnomlRenderer(BaseRenderer):
             if "<svg" not in svg:
                 raise RenderError("nomnoml", "nomnoml output does not contain <svg>")
             import xml.etree.ElementTree as ET
+
             try:
                 ET.fromstring(svg)
             except ET.ParseError as exc:
@@ -91,6 +94,7 @@ class NomnomlRenderer(BaseRenderer):
         finally:
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh
+
                 sh.rmtree(tmp_dir, ignore_errors=True)
 
     def _render_native(self, source: str) -> str:
@@ -98,5 +102,6 @@ class NomnomlRenderer(BaseRenderer):
         if converter is None:
             raise RenderError("nomnoml", "Native Nomnoml converter not available")
         from pidraw.engines.native import NativeRenderer
+
         native = NativeRenderer("nomnoml")
         return native.render(source)

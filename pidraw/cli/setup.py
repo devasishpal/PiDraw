@@ -19,13 +19,13 @@ _NPM_BIN = Path(os.environ.get("APPDATA", "")) / "npm"
 
 # npm packages needed per format: (language name, npm package, binary to check)
 _NPM_PKGS: list[tuple[str, str, str]] = [
-    ("nomnoml",    "nomnoml",           "nomnoml"),
-    ("markmap",    "markmap-cli",       "markmap"),
-    ("wavedrom",   "wavedrom-cli",      "wavedrom-cli"),
-    ("vega",       "vega-cli",          "vg2svg"),
-    ("vega-lite",  "vega-lite",         "vl2svg"),
-    ("bpmn",       "bpmn-svg-generator","bpmn-svg"),
-    ("playwright", "playwright",        "playwright"),
+    ("nomnoml", "nomnoml", "nomnoml"),
+    ("markmap", "markmap-cli", "markmap"),
+    ("wavedrom", "wavedrom-cli", "wavedrom-cli"),
+    ("vega", "vega-cli", "vg2svg"),
+    ("vega-lite", "vega-lite", "vl2svg"),
+    ("bpmn", "bpmn-svg-generator", "bpmn-svg"),
+    ("playwright", "playwright", "playwright"),
 ]
 
 
@@ -38,7 +38,10 @@ def _npm_install(pkg: str) -> bool:
     try:
         subprocess.run(
             ["npm", "install", "-g", pkg],
-            capture_output=True, text=True, timeout=120, check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=True,
         )
         return True
     except Exception as exc:
@@ -59,7 +62,10 @@ def _install_playwright_browsers() -> str:
         try:
             subprocess.run(
                 ["playwright", "install", "chromium"],
-                capture_output=True, text=True, timeout=300, check=True,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=True,
             )
             return "Chromium installed"
         except Exception as exc:
@@ -69,7 +75,10 @@ def _install_playwright_browsers() -> str:
         try:
             subprocess.run(
                 [npm_playwright, "install", "chromium"],
-                capture_output=True, text=True, timeout=300, check=True,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                check=True,
             )
             return "Chromium installed"
         except Exception as exc:
@@ -128,6 +137,7 @@ def _ensure_pip_deps() -> str:
     """Install pip packages needed for native rendering."""
     try:
         import vl_convert  # noqa: F401
+
         return "Already installed"
     except ImportError:
         pass
@@ -135,7 +145,10 @@ def _ensure_pip_deps() -> str:
     try:
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "vl-convert-python"],
-            capture_output=True, text=True, timeout=120, check=True,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=True,
         )
         return "Installed"
     except Exception as exc:

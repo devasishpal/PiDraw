@@ -43,13 +43,16 @@ class TestExportPipeline:
 
     def test_pipeline_from_diagram(self) -> None:
         from pidraw.pipeline import render_native_from_diagram
+
         d = Diagram(id="test", viewport=Viewport(300, 200))
-        d.add_node(Node(
-            id="n1",
-            label=Label(text="Hello"),
-            position=Position(10, 10),
-            size=Size(100, 50),
-        ))
+        d.add_node(
+            Node(
+                id="n1",
+                label=Label(text="Hello"),
+                position=Position(10, 10),
+                size=Size(100, 50),
+            )
+        )
         svg = render_native_from_diagram(d)
         assert "<svg" in svg
 
@@ -60,6 +63,7 @@ class TestExportPipeline:
 
     def test_unknown_language_raises(self) -> None:
         import pytest
+
         with pytest.raises(ValueError, match="No converter"):
             render_native("anything", "unknown_lang")
 

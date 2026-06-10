@@ -13,9 +13,14 @@ _FENCED_BLOCK = re.compile(
 )
 
 _DIAGRAM_LANGUAGES = {
-    "mermaid", "mmd",
-    "plantuml", "puml", "iuml",
-    "graphviz", "dot", "gv",
+    "mermaid",
+    "mmd",
+    "plantuml",
+    "puml",
+    "iuml",
+    "graphviz",
+    "dot",
+    "gv",
     "d2",
     "bpmn",
     "nomnoml",
@@ -39,13 +44,15 @@ def extract_diagrams(markdown: str) -> list[dict]:
             if is_diagram:
                 lang = detected
         if is_diagram:
-            blocks.append({
-                "match": match,
-                "language": lang,
-                "code": code,
-                "start": match.start(),
-                "end": match.end(),
-            })
+            blocks.append(
+                {
+                    "match": match,
+                    "language": lang,
+                    "code": code,
+                    "start": match.start(),
+                    "end": match.end(),
+                }
+            )
     return blocks
 
 
@@ -80,7 +87,7 @@ def to_html(
     last_end = 0
 
     for block in blocks:
-        parts.append(markdown[last_end:block["start"]])
+        parts.append(markdown[last_end : block["start"]])
         parts.append(_render_block_html(block, fmt))
         last_end = block["end"]
 
@@ -109,7 +116,7 @@ def to_html(
 
 def _render_block_html(block: dict, fmt: str) -> str:
     if "error" in block:
-        return f'<pre>Diagram error: {_escape_html(block["error"])}</pre>\n'
+        return f"<pre>Diagram error: {_escape_html(block['error'])}</pre>\n"
 
     rendered = block["rendered"]
     if fmt == "png":
@@ -127,7 +134,7 @@ def to_markdown(
     last_end = 0
 
     for block in blocks:
-        parts.append(markdown[last_end:block["start"]])
+        parts.append(markdown[last_end : block["start"]])
         parts.append(_render_block_md(block, fmt))
         last_end = block["end"]
 
@@ -137,22 +144,25 @@ def to_markdown(
 
 def _render_block_md(block: dict, fmt: str) -> str:
     if "error" in block:
-        return f'```\nERROR: {block["error"]}\n```\n'
+        return f"```\nERROR: {block['error']}\n```\n"
 
     rendered = block["rendered"]
     if fmt == "png":
         b64 = base64.b64encode(rendered).decode("ascii")
-        return f'![diagram](data:image/png;base64,{b64})\n\n'
-    return f'```svg\n{rendered}\n```\n'
+        return f"![diagram](data:image/png;base64,{b64})\n\n"
+    return f"```svg\n{rendered}\n```\n"
 
 
 def _escape_html(text: str) -> str:
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return (
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    )
 
 
 def _add_image_to_paragraph(paragraph, stream) -> None:
     from docx.shared import Inches
     from PIL import Image
+
     Image.MAX_IMAGE_PIXELS = None
 
     img = Image.open(stream)
@@ -189,7 +199,7 @@ def to_docx(
     last_end = 0
 
     for block in blocks:
-        text_before = markdown[last_end:block["start"]]
+        text_before = markdown[last_end : block["start"]]
         if text_before.strip():
             _add_text_to_docx(doc, text_before)
 
@@ -201,6 +211,7 @@ def to_docx(
             img_bytes = block["rendered"]
             if isinstance(img_bytes, bytes):
                 from PIL import Image as PILImage
+
                 PILImage.MAX_IMAGE_PIXELS = None
                 preview = PILImage.open(BytesIO(img_bytes))
                 blank = min(preview.size) < 20

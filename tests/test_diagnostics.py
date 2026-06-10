@@ -37,6 +37,7 @@ class TestAnalyze:
 
         class FakeRenderer(BaseRenderer):
             name = "mermaid"
+
             def render(self, source: str) -> str:
                 return "<svg></svg>"
 
@@ -60,6 +61,7 @@ class TestAnalyze:
 
         class FakeRenderer(BaseRenderer):
             name = "graphviz"
+
             def render(self, source: str) -> str:
                 return "<svg xmlns='http://www.w3.org/2000/svg'><g id='test'/></svg>"
 
@@ -88,7 +90,7 @@ class TestAnalyze:
         assert result.confidence > 0.9
 
     def test_analyze_with_structurizr(self) -> None:
-        result = analyze("workspace {\n    model {\n        user = person \"User\"\n    }\n}")
+        result = analyze('workspace {\n    model {\n        user = person "User"\n    }\n}')
         assert result.detected_language == "structurizr"
         assert result.confidence > 0.9
 
@@ -100,7 +102,9 @@ class TestAnalyze:
         assert result.confidence > 0.9
 
     def test_analyze_with_bpmn(self) -> None:
-        result = analyze('<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">')
+        result = analyze(
+            '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">'
+        )
         assert result.detected_language == "bpmn"
         assert result.confidence > 0.9
 

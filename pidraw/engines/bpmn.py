@@ -1,4 +1,5 @@
 """Renderer for BPMN diagrams via ``bpmn-to-svg`` CLI (npm) or native fallback."""
+
 from __future__ import annotations
 
 import json
@@ -13,6 +14,7 @@ from typing import Any, Optional
 
 try:
     import drawsvg as _dw
+
     _HAS_DRAWSVG = True
 except ImportError:
     _dw = None
@@ -68,9 +70,19 @@ def _parse_bpmn_xml(source: str) -> tuple[list[BPMNElement], list[BPMNFlow]]:
                 local = tag
             el_id = child.get("id", "")
             el_name = child.get("name", "") or el_id
-            if local in ("startEvent", "endEvent", "task", "serviceTask", "userTask",
-                          "exclusiveGateway", "parallelGateway", "inclusiveGateway",
-                          "intermediateCatchEvent", "subProcess", "callActivity"):
+            if local in (
+                "startEvent",
+                "endEvent",
+                "task",
+                "serviceTask",
+                "userTask",
+                "exclusiveGateway",
+                "parallelGateway",
+                "inclusiveGateway",
+                "intermediateCatchEvent",
+                "subProcess",
+                "callActivity",
+            ):
                 el = BPMNElement(el_id, el_name, local)
                 if local in ("startEvent", "endEvent", "intermediateCatchEvent"):
                     el.w, el.h = 36, 36
@@ -178,15 +190,22 @@ def _render_bpmn_svg(elements: list[BPMNElement], flows: list[BPMNFlow]) -> str:
             y1 = src.y + src.h
             x2 = tgt.x + tgt.w / 2
             y2 = tgt.y
-            dwg.append(dw.Line(x1, y1, x2, y2,
-                               stroke="#333", stroke_width=1.5))
+            dwg.append(dw.Line(x1, y1, x2, y2, stroke="#333", stroke_width=1.5))
             _draw_arrowhead(dwg, x1, y1, x2, y2, dw)
             if flow.label:
                 mx = (x1 + x2) / 2
                 my = (y1 + y2) / 2
-                dwg.append(dw.Text(flow.label, font_size=11, x=mx, y=my - 5,
-                                    fill="#333", text_anchor="middle",
-                                    font_family="sans-serif"))
+                dwg.append(
+                    dw.Text(
+                        flow.label,
+                        font_size=11,
+                        x=mx,
+                        y=my - 5,
+                        fill="#333",
+                        text_anchor="middle",
+                        font_family="sans-serif",
+                    )
+                )
 
     # Draw nodes
     for el in elements:
@@ -203,47 +222,99 @@ def _draw_bpmn_element(dwg: Any, el: BPMNElement, dw: Any) -> None:
     sw = 2
 
     if el.type == "startEvent":
-        dwg.append(dw.Circle(cx, cy, min(el.w, el.h) / 2,
-                             fill=fill, stroke=stroke, stroke_width=sw))
-        dwg.append(dw.Text(el.name, font_size=11, x=cx, y=el.y + el.h + 14,
-                            fill="#333", text_anchor="middle",
-                            font_family="sans-serif"))
+        dwg.append(
+            dw.Circle(cx, cy, min(el.w, el.h) / 2, fill=fill, stroke=stroke, stroke_width=sw)
+        )
+        dwg.append(
+            dw.Text(
+                el.name,
+                font_size=11,
+                x=cx,
+                y=el.y + el.h + 14,
+                fill="#333",
+                text_anchor="middle",
+                font_family="sans-serif",
+            )
+        )
     elif el.type == "endEvent":
         r = min(el.w, el.h) / 2
         dwg.append(dw.Circle(cx, cy, r, fill=fill, stroke=stroke, stroke_width=sw))
         dwg.append(dw.Circle(cx, cy, r - 4, fill="none", stroke=stroke, stroke_width=sw + 1))
-        dwg.append(dw.Text(el.name, font_size=11, x=cx, y=el.y + el.h + 14,
-                            fill="#333", text_anchor="middle",
-                            font_family="sans-serif"))
+        dwg.append(
+            dw.Text(
+                el.name,
+                font_size=11,
+                x=cx,
+                y=el.y + el.h + 14,
+                fill="#333",
+                text_anchor="middle",
+                font_family="sans-serif",
+            )
+        )
     elif el.type in ("exclusiveGateway",):
         path = f"M{cx},{el.y} L{el.x + el.w},{cy} L{cx},{el.y + el.h} L{el.x},{cy} Z"
         dwg.append(dw.Path(path, fill=fill, stroke=stroke, stroke_width=sw))
-        dwg.append(dw.Text(el.name, font_size=11, x=cx, y=el.y + el.h + 14,
-                            fill="#333", text_anchor="middle",
-                            font_family="sans-serif"))
+        dwg.append(
+            dw.Text(
+                el.name,
+                font_size=11,
+                x=cx,
+                y=el.y + el.h + 14,
+                fill="#333",
+                text_anchor="middle",
+                font_family="sans-serif",
+            )
+        )
     elif el.type in ("parallelGateway",):
         path = f"M{cx},{el.y} L{el.x + el.w},{cy} L{cx},{el.y + el.h} L{el.x},{cy} Z"
         dwg.append(dw.Path(path, fill=fill, stroke=stroke, stroke_width=sw))
         dwg.append(dw.Line(cx - 6, cy, cx + 6, cy, stroke=stroke, stroke_width=2))
         dwg.append(dw.Line(cx, cy - 6, cx, cy + 6, stroke=stroke, stroke_width=2))
-        dwg.append(dw.Text(el.name, font_size=11, x=cx, y=el.y + el.h + 14,
-                            fill="#333", text_anchor="middle",
-                            font_family="sans-serif"))
+        dwg.append(
+            dw.Text(
+                el.name,
+                font_size=11,
+                x=cx,
+                y=el.y + el.h + 14,
+                fill="#333",
+                text_anchor="middle",
+                font_family="sans-serif",
+            )
+        )
     elif el.type in ("intermediateCatchEvent",):
         r = min(el.w, el.h) / 2
         dwg.append(dw.Circle(cx, cy, r, fill=fill, stroke=stroke, stroke_width=sw))
         dwg.append(dw.Circle(cx, cy, r - 3, fill="none", stroke=stroke, stroke_width=1))
-        dwg.append(dw.Text(el.name, font_size=11, x=cx, y=el.y + el.h + 14,
-                            fill="#333", text_anchor="middle",
-                            font_family="sans-serif"))
+        dwg.append(
+            dw.Text(
+                el.name,
+                font_size=11,
+                x=cx,
+                y=el.y + el.h + 14,
+                fill="#333",
+                text_anchor="middle",
+                font_family="sans-serif",
+            )
+        )
     else:
         # task, serviceTask, userTask, subProcess, callActivity — rounded rect
         r = 6
-        dwg.append(dw.Rectangle(el.x, el.y, el.w, el.h, rx=r, ry=r,
-                                 fill=fill, stroke=stroke, stroke_width=sw))
-        dwg.append(dw.Text(el.name, font_size=12, x=cx, y=cy + 4,
-                            fill="#333", text_anchor="middle",
-                            font_family="sans-serif"))
+        dwg.append(
+            dw.Rectangle(
+                el.x, el.y, el.w, el.h, rx=r, ry=r, fill=fill, stroke=stroke, stroke_width=sw
+            )
+        )
+        dwg.append(
+            dw.Text(
+                el.name,
+                font_size=12,
+                x=cx,
+                y=cy + 4,
+                fill="#333",
+                text_anchor="middle",
+                font_family="sans-serif",
+            )
+        )
 
 
 def _draw_arrowhead(dwg: Any, x1: float, y1: float, x2: float, y2: float, dw: Any) -> None:
@@ -335,13 +406,18 @@ class BPMNRenderer(BaseRenderer):
         finally:
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh
+
                 sh.rmtree(tmp_dir, ignore_errors=True)
 
     @staticmethod
     def _cli_output_is_empty(svg: str) -> bool:
         """Check if CLI-produced SVG has no visible diagram content."""
         after_defs = svg.split("</defs>")[-1] if "</defs>" in svg else svg
-        visible = len(re.findall(r"<(rect|circle|ellipse|path|text|line|polygon)[\s>]", after_defs, re.IGNORECASE))
+        visible = len(
+            re.findall(
+                r"<(rect|circle|ellipse|path|text|line|polygon)[\s>]", after_defs, re.IGNORECASE
+            )
+        )
         return visible < len(re.findall(r"<marker[\s>]", svg, re.IGNORECASE)) + 1
 
     def _run_native(self, source: str) -> str:

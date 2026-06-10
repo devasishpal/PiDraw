@@ -1,4 +1,5 @@
 """Test all language renderers and save SVG+PNG outputs."""
+
 from pathlib import Path
 
 from pidraw import render
@@ -6,6 +7,7 @@ from pidraw.backend.png import svg_to_png
 
 OUT = Path(r"C:\Users\Alok\Desktop\pidraw_test")
 OUT.mkdir(parents=True, exist_ok=True)
+
 
 def save(name, svg):
     svg_path = OUT / f"{name}.svg"
@@ -19,23 +21,49 @@ def save(name, svg):
         png = svg_to_png(svg, transparent=False, trim=False)
         png_path.write_bytes(png)
         png_ok = "fallback"
-    print(f"  {name}: SVG {len(svg)} bytes, PNG {png_path.stat().st_size if png_path.exists() else 0} bytes (PNG: {png_ok})")
+    print(
+        f"  {name}: SVG {len(svg)} bytes, PNG {png_path.stat().st_size if png_path.exists() else 0} bytes (PNG: {png_ok})"
+    )
+
 
 # 1. Mermaid flowchart
 print("\n1. Mermaid (flowchart)")
-save("mermaid_flowchart", render("graph TD; A[Start] --> B{Is it working?}; B -->|Yes| C[Great!]; B -->|No| D[Fix it]; D --> B", language="mermaid").svg)
+save(
+    "mermaid_flowchart",
+    render(
+        "graph TD; A[Start] --> B{Is it working?}; B -->|Yes| C[Great!]; B -->|No| D[Fix it]; D --> B",
+        language="mermaid",
+    ).svg,
+)
 
 # 2. Mermaid sequenceDiagram
 print("\n2. Mermaid (sequenceDiagram)")
-save("mermaid_sequence", render("sequenceDiagram; participant Alice; participant Bob; Alice->>John: Hello; John-->>Alice: Hi!", language="mermaid").svg)
+save(
+    "mermaid_sequence",
+    render(
+        "sequenceDiagram; participant Alice; participant Bob; Alice->>John: Hello; John-->>Alice: Hi!",
+        language="mermaid",
+    ).svg,
+)
 
 # 3. Mermaid classDiagram
 print("\n3. Mermaid (classDiagram)")
-save("mermaid_class", render("classDiagram; class Animal { +name; +age }; class Dog { +breed }; Animal <|-- Dog", language="mermaid").svg)
+save(
+    "mermaid_class",
+    render(
+        "classDiagram; class Animal { +name; +age }; class Dog { +breed }; Animal <|-- Dog",
+        language="mermaid",
+    ).svg,
+)
 
 # 4. Mermaid stateDiagram
 print("\n4. Mermaid (stateDiagram)")
-save("mermaid_state", render("stateDiagram-v2; [*] --> Still; Still --> Moving; Moving --> [*]", language="mermaid").svg)
+save(
+    "mermaid_state",
+    render(
+        "stateDiagram-v2; [*] --> Still; Still --> Moving; Moving --> [*]", language="mermaid"
+    ).svg,
+)
 
 # 5. Mermaid erDiagram
 print("\n5. Mermaid (erDiagram)")
@@ -47,7 +75,12 @@ save("mermaid_pie", render('pie; "Dogs" : 386; "Cats" : 85; "Rats" : 15', langua
 
 # 7. Mermaid gantt
 print("\n7. Mermaid (gantt)")
-save("mermaid_gantt", render("gantt; dateFormat YYYY-MM-DD; section S; A task: 2014-01-01, 30d", language="mermaid").svg)
+save(
+    "mermaid_gantt",
+    render(
+        "gantt; dateFormat YYYY-MM-DD; section S; A task: 2014-01-01, 30d", language="mermaid"
+    ).svg,
+)
 
 # 8. PlantUML
 print("\n8. PlantUML")
@@ -79,11 +112,17 @@ save("wavedrom", render('{"signal":[{"name":"clk","wave":"P"}]}', language="wave
 
 # 15. Structurizr
 print("\n15. Structurizr")
-save("structurizr", render('workspace {\n  model {\n    user = person "User"\n    system = softwareSystem "My System"\n    user -> system "Uses"\n  }\n}', language="structurizr").svg)
+save(
+    "structurizr",
+    render(
+        'workspace {\n  model {\n    user = person "User"\n    system = softwareSystem "My System"\n    user -> system "Uses"\n  }\n}',
+        language="structurizr",
+    ).svg,
+)
 
 # 16. BPMN
 print("\n16. BPMN")
-bpmn_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+bpmn_xml = """<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
@@ -96,24 +135,48 @@ bpmn_xml = '''<?xml version="1.0" encoding="UTF-8"?>
     <sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_1"/>
     <sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="End_1"/>
   </process>
-</definitions>'''
+</definitions>"""
 save("bpmn", render(bpmn_xml, language="bpmn").svg)
 
 # 17. Vega-Lite
 print("\n17. Vega-Lite")
-save("vega_lite", render('{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","mark":"bar","data":{"values":[{"a":"A","b":28},{"a":"B","b":55}]},"encoding":{"x":{"field":"a"},"y":{"field":"b","type":"quantitative"}}}', language="vega-lite").svg)
+save(
+    "vega_lite",
+    render(
+        '{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","mark":"bar","data":{"values":[{"a":"A","b":28},{"a":"B","b":55}]},"encoding":{"x":{"field":"a"},"y":{"field":"b","type":"quantitative"}}}',
+        language="vega-lite",
+    ).svg,
+)
 
 # 18. Excalidraw
 print("\n18. Excalidraw")
-save("excalidraw", render('{"type":"excalidraw","elements":[{"id":"a","type":"rectangle","x":0,"y":0,"width":100,"height":60,"strokeColor":"#000","backgroundColor":"#fff","text":"Hello"},{"id":"b","type":"arrow","points":[[0,0],[120,0]],"startBinding":{"elementId":"a"},"endBinding":{"elementId":"c"}},{"id":"c","type":"ellipse","x":200,"y":0,"width":80,"height":60,"strokeColor":"#000","backgroundColor":"#fff","text":"World"}]}', language="excalidraw").svg)
+save(
+    "excalidraw",
+    render(
+        '{"type":"excalidraw","elements":[{"id":"a","type":"rectangle","x":0,"y":0,"width":100,"height":60,"strokeColor":"#000","backgroundColor":"#fff","text":"Hello"},{"id":"b","type":"arrow","points":[[0,0],[120,0]],"startBinding":{"elementId":"a"},"endBinding":{"elementId":"c"}},{"id":"c","type":"ellipse","x":200,"y":0,"width":80,"height":60,"strokeColor":"#000","backgroundColor":"#fff","text":"World"}]}',
+        language="excalidraw",
+    ).svg,
+)
 
 # 19. TikZ
 print("\n19. TikZ")
-save("tikz", render("\\node[draw] (a) {Hello}; \\node[draw,circle] (b) at (3,0) {World}; \\draw[->] (a) -- (b);", language="tikz").svg)
+save(
+    "tikz",
+    render(
+        "\\node[draw] (a) {Hello}; \\node[draw,circle] (b) at (3,0) {World}; \\draw[->] (a) -- (b);",
+        language="tikz",
+    ).svg,
+)
 
 # 20. Vega (full)
 print("\n20. Vega")
-save("vega", render('{"$schema":"https://vega.github.io/schema/vega/v5.json","width":200,"height":200,"marks":[{"type":"symbol","encode":{"enter":{"x":{"value":100},"y":{"value":100},"size":{"value":100},"shape":{"value":"circle"}}}}]}', language="vega").svg)
+save(
+    "vega",
+    render(
+        '{"$schema":"https://vega.github.io/schema/vega/v5.json","width":200,"height":200,"marks":[{"type":"symbol","encode":{"enter":{"x":{"value":100},"y":{"value":100},"size":{"value":100},"shape":{"value":"circle"}}}}]}',
+        language="vega",
+    ).svg,
+)
 
 print("\n=== ALL DONE ===")
 print(f"Output directory: {OUT}")

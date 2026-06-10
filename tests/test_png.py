@@ -1,4 +1,5 @@
 """Tests for PNG output pipeline."""
+
 from __future__ import annotations
 
 from importlib import util as importlib_util

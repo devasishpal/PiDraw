@@ -1,4 +1,5 @@
 """Renderer for Kroki-compatible diagram formats."""
+
 from __future__ import annotations
 
 import json
@@ -38,9 +39,7 @@ class KrokiRenderer(BaseRenderer):
         if "\x00" in source:
             raise RenderError("kroki", "Kroki source contains null bytes")
         if len(source.encode("utf-8")) > _MAX_SIZE:
-            raise RenderError(
-                "kroki", f"Kroki source exceeds {_MAX_SIZE // 1024} KB limit"
-            )
+            raise RenderError("kroki", f"Kroki source exceeds {_MAX_SIZE // 1024} KB limit")
 
         url = f"{self._endpoint}/{self._diagram_type}/{self._output_format}"
         payload = json.dumps({"diagram_source": source}).encode("utf-8")
@@ -75,9 +74,7 @@ class KrokiRenderer(BaseRenderer):
 
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")[:500]
-            raise RenderError(
-                "kroki", f"Kroki HTTP {exc.code}: {body}"
-            )
+            raise RenderError("kroki", f"Kroki HTTP {exc.code}: {body}")
         except urllib.error.URLError:
             raise EngineNotAvailableError(
                 "kroki",

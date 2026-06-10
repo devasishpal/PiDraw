@@ -15,6 +15,7 @@ class TestIncrementalRenderer:
 
     def teardown_method(self) -> None:
         import shutil
+
         shutil.rmtree(self.state_dir, ignore_errors=True)
 
     def test_needs_render_new_file(self) -> None:

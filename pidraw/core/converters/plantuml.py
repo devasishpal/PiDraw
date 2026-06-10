@@ -18,16 +18,16 @@ from pidraw.core.models import (
 _PARTICIPANT_PATTERN = re.compile(
     r"(?:participant|actor|entity|class)\s+"
     r'"?(?:(\w[\w\d_]*)"?\s+as\s+(\w[\w\d_]*)|(\w[\w\d_]*))"?'
-    r'(?:\s*<<\s*(\w+)\s*>>)?'
-    r'(?:\s*\{)?',
+    r"(?:\s*<<\s*(\w+)\s*>>)?"
+    r"(?:\s*\{)?",
     re.IGNORECASE,
 )
 
 _ARROW_PATTERN = re.compile(
-    r'(\w[\w\d_]*)\s*'
-    r'(-+>|\.+>|-+>>|\.+>>|-+\)|\.+\)|-+\[|\.+\[|<[-.]+>|<-[-.]+|<<?[-.]+>>?)'
-    r'(?:\s*:\s*(.+))?\s*'
-    r'(\w[\w\d_]*)?'
+    r"(\w[\w\d_]*)\s*"
+    r"(-+>|\.+>|-+>>|\.+>>|-+\)|\.+\)|-+\[|\.+\[|<[-.]+>|<-[-.]+|<<?[-.]+>>?)"
+    r"(?:\s*:\s*(.+))?\s*"
+    r"(\w[\w\d_]*)?"
 )
 
 _NOTE_PATTERN = re.compile(r"note\s+(left|right|over)\s+(\w[\w\d_]*)", re.IGNORECASE)
@@ -39,12 +39,20 @@ class PlantUMLConverter(DiagramConverter):
 
     def parse(self, source: str) -> Diagram:
         diagram = Diagram(id="plantuml_diagram", title="PlantUML Diagram")
-        diagram.layout = Layout(layout_type=LayoutType.LAYERED, direction="LR", node_spacing=50, layer_spacing=80)
+        diagram.layout = Layout(
+            layout_type=LayoutType.LAYERED, direction="LR", node_spacing=50, layer_spacing=80
+        )
 
         lines = source.strip().split("\n")
         for line in lines:
             line = line.strip()
-            if not line or line.startswith("'") or line == "@startuml" or line == "@enduml" or line.startswith("skinparam"):
+            if (
+                not line
+                or line.startswith("'")
+                or line == "@startuml"
+                or line == "@enduml"
+                or line.startswith("skinparam")
+            ):
                 continue
             if line.startswith("package ") or line.startswith("namespace "):
                 continue
@@ -62,7 +70,11 @@ class PlantUMLConverter(DiagramConverter):
                         node = Node(
                             id=nid,
                             label=Label(text=nid),
-                            shape=Shape(shape_type=ShapeType.ACTOR if "actor" in line else ShapeType.RECTANGLE),
+                            shape=Shape(
+                                shape_type=ShapeType.ACTOR
+                                if "actor" in line
+                                else ShapeType.RECTANGLE
+                            ),
                             size=Size(120, 50),
                         )
                         diagram.add_node(node)

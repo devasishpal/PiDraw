@@ -477,9 +477,7 @@ def batch_cmd(
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     n_workers = workers or os.cpu_count() or 4
-    args_list = [
-        (str(f), output_dir, optimize, language) for f in files
-    ]
+    args_list = [(str(f), output_dir, optimize, language) for f in files]
 
     results: list[BatchResult] = []
     n_ok = n_fail = n_skip = 0
@@ -505,14 +503,16 @@ def batch_cmd(
     spinner.stop()
     spinner.done(f"Rendered {n_ok}/{len(files)} files ({elapsed:.0f}ms)")
 
-    _print_batch_summary(BatchSummary(
-        total=len(files),
-        succeeded=n_ok,
-        skipped=n_skip,
-        failed=n_fail,
-        elapsed_ms=elapsed,
-        results=results,
-    ))
+    _print_batch_summary(
+        BatchSummary(
+            total=len(files),
+            succeeded=n_ok,
+            skipped=n_skip,
+            failed=n_fail,
+            elapsed_ms=elapsed,
+            results=results,
+        )
+    )
 
     if n_fail > 0:
         raise SystemExit(1)
@@ -564,7 +564,6 @@ def watch_cmd(
 ) -> None:
     """Watch diagram files for changes and auto-render."""
     import time as time_module
-
 
     files = _scan_files(paths, recursive=recursive)
     if not files:

@@ -60,7 +60,7 @@ class TestDetect:
         assert detect("@startsalt\n{\nJust a text\n}\n@endsalt") == "plantuml"
 
     def test_plantuml_startjson(self) -> None:
-        assert detect("@startjson\n{\"key\": \"value\"}\n@endjson") == "plantuml"
+        assert detect('@startjson\n{"key": "value"}\n@endjson') == "plantuml"
 
     def test_plantuml_startyaml(self) -> None:
         assert detect("@startyaml\nkey: value\n@endyaml") == "plantuml"
@@ -169,7 +169,9 @@ class TestDetectLanguage:
         assert result.confidence >= 0.9
 
     def test_confidence_vega_lite(self) -> None:
-        result = detect_language('{"$schema": "https://vega-lite.github.io/schema/vega-lite/v5.json"}')
+        result = detect_language(
+            '{"$schema": "https://vega-lite.github.io/schema/vega-lite/v5.json"}'
+        )
         assert result.language.value == "vega-lite"
         assert result.confidence >= 0.95
 
@@ -179,7 +181,9 @@ class TestDetectLanguage:
         assert result.confidence >= 0.95
 
     def test_confidence_bpmn(self) -> None:
-        result = detect_language('<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"/>')
+        result = detect_language(
+            '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"/>'
+        )
         assert result.language.value == "bpmn"
         assert result.confidence >= 0.95
 

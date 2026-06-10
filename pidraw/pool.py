@@ -1,4 +1,5 @@
 """High-performance parallel rendering pool."""
+
 from __future__ import annotations
 
 import os
@@ -112,9 +113,7 @@ class RenderPool:
         """
         source_list = list(sources)
         fp_list: list[str | None] = (
-            list(file_paths)
-            if file_paths is not None
-            else [None] * len(source_list)
+            list(file_paths) if file_paths is not None else [None] * len(source_list)
         )
 
         n = len(source_list)
@@ -134,14 +133,10 @@ class RenderPool:
                     )
 
         # Build task list for uncached items
-        tasks: list[int] = [
-            i for i, r in enumerate(results) if r is None
-        ]
+        tasks: list[int] = [i for i, r in enumerate(results) if r is None]
 
         if not tasks:
-            return self._finalize_results(
-                results, source_list, language, task_id_offset, fp_list
-            )
+            return self._finalize_results(results, source_list, language, task_id_offset, fp_list)
 
         executor_cls = ProcessPoolExecutor if self._use_processes else ThreadPoolExecutor
 
@@ -164,9 +159,7 @@ class RenderPool:
                     result = future.result()
                     results[idx] = result
                     if self._cache is not None and result.error is None:
-                        self._cache.set(
-                            source_list[idx], result.svg, language=language
-                        )
+                        self._cache.set(source_list[idx], result.svg, language=language)
                 except Exception as exc:
                     results[idx] = PoolRenderResult(
                         svg="",
@@ -179,9 +172,7 @@ class RenderPool:
                 if show_progress:
                     self._print_progress(done, len(tasks))
 
-        return self._finalize_results(
-            results, source_list, language, task_id_offset, fp_list
-        )
+        return self._finalize_results(results, source_list, language, task_id_offset, fp_list)
 
     def _finalize_results(
         self,

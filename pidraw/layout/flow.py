@@ -34,8 +34,14 @@ class FlowLayout(LayoutEngine):
         # Always recompute viewport from actual positions
         min_x = min((n.position.x for n in nodes if n.position), default=0)
         min_y = min((n.position.y for n in nodes if n.position), default=0)
-        max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=x + padding)
-        max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=y + padding)
+        max_x = max(
+            (n.position.x + n.size.width for n in nodes if n.position and n.size),
+            default=x + padding,
+        )
+        max_y = max(
+            (n.position.y + n.size.height for n in nodes if n.position and n.size),
+            default=y + padding,
+        )
         cw = max_x - min_x
         ch = max_y - min_y
         pad = max(padding * 2, cw * 0.15, ch * 0.15)

@@ -15,12 +15,7 @@ _HGH2 = _HGH / 2
 
 
 def _escape(t: str) -> str:
-    return (
-        t.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def _parse_wave_char(ch: str, prev: str) -> str:
@@ -41,7 +36,9 @@ def _parse_wave_char(ch: str, prev: str) -> str:
     return prev if prev else "0"
 
 
-def _build_wave_signal(wave: str, data: list[str] | None) -> tuple[list[str], list[str | None], list[float]]:
+def _build_wave_signal(
+    wave: str, data: list[str] | None
+) -> tuple[list[str], list[str | None], list[float]]:
     if not wave:
         return [], [], []
 
@@ -183,8 +180,7 @@ def _render_clock(y: float, wave: str, hgap: float = _WDT) -> list[str]:
             )
         elif ch == "1":
             parts.append(
-                f'  <line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" '
-                f'stroke="#333" stroke-width="2"/>'
+                f'  <line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" stroke="#333" stroke-width="2"/>'
             )
         elif ch == "h":
             parts.append(
@@ -257,13 +253,15 @@ class WaveDromNativeRenderer(BaseRenderer):
             wave_str = sig.get("wave", "")
             sig_data = sig.get("data", [])
             points, labels, markers = _build_wave_signal(wave_str, sig_data)
-            parsed_signals.append({
-                "name": sig.get("name", ""),
-                "points": points,
-                "labels": labels,
-                "markers": markers,
-                "wave": wave_str,
-            })
+            parsed_signals.append(
+                {
+                    "name": sig.get("name", ""),
+                    "points": points,
+                    "labels": labels,
+                    "markers": markers,
+                    "wave": wave_str,
+                }
+            )
             max_periods = max(max_periods, len(points))
 
         canvas_w = max(max_periods * hgap + 120, 200)
@@ -292,7 +290,7 @@ class WaveDromNativeRenderer(BaseRenderer):
         if head:
             head_text = head.get("text", "")
             svg_parts.append(
-                f'  <text x="{canvas_w/2}" y="20" text-anchor="middle" '
+                f'  <text x="{canvas_w / 2}" y="20" text-anchor="middle" '
                 f'font-family="sans-serif" font-size="14" fill="#333">{_escape(str(head_text))}</text>'
             )
 
@@ -306,10 +304,17 @@ class WaveDromNativeRenderer(BaseRenderer):
             if wave_str and all(c in "pPnN01hl" for c in wave_str):
                 svg_parts.extend(_render_clock(current_y, wave_str, hgap))
             else:
-                svg_parts.extend(_render_wave_signal(
-                    current_y, name, wave_str,
-                    sig["labels"], points, 0, hgap,
-                ))
+                svg_parts.extend(
+                    _render_wave_signal(
+                        current_y,
+                        name,
+                        wave_str,
+                        sig["labels"],
+                        points,
+                        0,
+                        hgap,
+                    )
+                )
 
             for m_x in sig["markers"]:
                 mx = m_x + 100
@@ -335,7 +340,7 @@ class WaveDromNativeRenderer(BaseRenderer):
         if foot:
             foot_text = foot.get("text", "")
             svg_parts.append(
-                f'  <text x="{canvas_w/2}" y="{canvas_h - 10}" text-anchor="middle" '
+                f'  <text x="{canvas_w / 2}" y="{canvas_h - 10}" text-anchor="middle" '
                 f'font-family="sans-serif" font-size="12" fill="#666">{_escape(str(foot_text))}</text>'
             )
 

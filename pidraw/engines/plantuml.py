@@ -1,4 +1,5 @@
 """PlantUML renderer powered by the PlantUML CLI or Java jar."""
+
 from __future__ import annotations
 
 import os
@@ -206,9 +207,7 @@ class PlantUMLRenderer(BaseRenderer):
                 check=False,
             )
         except FileNotFoundError:
-            raise RenderError(
-                "plantuml", f"PlantUML executable not found at '{self._cmd[0]}'"
-            )
+            raise RenderError("plantuml", f"PlantUML executable not found at '{self._cmd[0]}'")
 
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="replace").strip()

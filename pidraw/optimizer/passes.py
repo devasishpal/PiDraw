@@ -270,8 +270,24 @@ def collapse_redundant_groups(svg: str) -> str:
 
 _SIGNIFICANT_ATTRS = frozenset(
     {
-        "width", "height", "x", "y", "d", "points", "r", "cx", "cy",
-        "rx", "ry", "viewBox", "dx", "dy", "x1", "y1", "x2", "y2",
+        "width",
+        "height",
+        "x",
+        "y",
+        "d",
+        "points",
+        "r",
+        "cx",
+        "cy",
+        "rx",
+        "ry",
+        "viewBox",
+        "dx",
+        "dy",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
     }
 )
 

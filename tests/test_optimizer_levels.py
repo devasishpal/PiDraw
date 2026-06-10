@@ -13,8 +13,7 @@ from pidraw.optimizer.svg_optimizer import OptimizationResult
 
 class TestOptimizeByLevel:
     MINIMAL_SVG = (
-        '<svg xmlns="http://www.w3.org/2000/svg">'
-        "<g><circle cx='10' cy='10' r='5'/></g></svg>"
+        "<svg xmlns=\"http://www.w3.org/2000/svg\"><g><circle cx='10' cy='10' r='5'/></g></svg>"
     )
 
     def test_fast_level(self) -> None:

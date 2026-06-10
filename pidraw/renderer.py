@@ -92,9 +92,7 @@ def render(
         lang = detect(source)
 
     if lang == "unknown":
-        raise UnsupportedLanguageError(
-            "Unable to detect diagram language from source"
-        )
+        raise UnsupportedLanguageError("Unable to detect diagram language from source")
 
     renderer = get_renderer(lang)
     svg = renderer.render(source)

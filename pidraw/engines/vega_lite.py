@@ -1,4 +1,5 @@
 """Renderer for Vega-Lite schemas."""
+
 from __future__ import annotations
 
 import json
@@ -49,20 +50,14 @@ class VegaLiteRenderer(BaseRenderer):
         if "\x00" in source:
             raise RenderError("vega-lite", "Vega-Lite source contains null bytes")
         if len(source.encode("utf-8")) > _MAX_SIZE:
-            raise RenderError(
-                "vega-lite", f"Vega-Lite source exceeds {_MAX_SIZE // 1024} KB limit"
-            )
+            raise RenderError("vega-lite", f"Vega-Lite source exceeds {_MAX_SIZE // 1024} KB limit")
 
         try:
             spec = json.loads(source)
         except json.JSONDecodeError as exc:
             raise RenderError("vega-lite", f"Vega-Lite source is not valid JSON: {exc}")
 
-        return (
-            self._render_via_python(spec)
-            if self._vl_convert
-            else self._render_via_cli(source)
-        )
+        return self._render_via_python(spec) if self._vl_convert else self._render_via_cli(source)
 
     def _render_via_python(self, spec: dict[str, object]) -> str:
         assert self._vl_convert is not None
@@ -75,9 +70,7 @@ class VegaLiteRenderer(BaseRenderer):
             try:
                 ET.fromstring(svg)
             except ET.ParseError as exc:
-                raise RenderError(
-                    "vega-lite", f"vl-convert returned malformed XML: {exc}"
-                )
+                raise RenderError("vega-lite", f"vl-convert returned malformed XML: {exc}")
             return svg
         except RenderError:
             raise

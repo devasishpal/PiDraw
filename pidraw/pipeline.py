@@ -42,6 +42,7 @@ class ExportPipeline:
 
         if self._do_optimize:
             from pidraw.optimizer import optimize_svg
+
             result = optimize_svg(svg)
             svg = result.svg
 

@@ -35,13 +35,16 @@ class SvgBackend:
         vw = vp.width if vp else 800
         vh = vp.height if vp else 600
 
-        root = Element("svg", {
-            "xmlns": _SVG_NS,
-            "xmlns:xlink": _XLINK_NS,
-            "width": str(vw),
-            "height": str(vh),
-            "viewBox": f"{vx} {vy} {vw} {vh}",
-        })
+        root = Element(
+            "svg",
+            {
+                "xmlns": _SVG_NS,
+                "xmlns:xlink": _XLINK_NS,
+                "width": str(vw),
+                "height": str(vh),
+                "viewBox": f"{vx} {vy} {vw} {vh}",
+            },
+        )
 
         defs = SubElement(root, "defs")
         self._add_markers(defs, diagram)
@@ -49,11 +52,15 @@ class SvgBackend:
 
         bg = self._theme.get("background")
         if bg is not None:
-            _ = SubElement(root, "rect", {
-                "width": "100%",
-                "height": "100%",
-                "fill": bg,
-            })
+            _ = SubElement(
+                root,
+                "rect",
+                {
+                    "width": "100%",
+                    "height": "100%",
+                    "fill": bg,
+                },
+            )
 
         edges_g = SubElement(root, "g", {"id": "edges"})
         for edge in diagram.edges:
@@ -77,35 +84,52 @@ class SvgBackend:
             self._marker_ids.add(mid)
             marker_defs = _ARROW_MARKERS.get(arrow_style)
             if marker_defs is not None:
-                marker_elem = Element("marker", {
-                    "id": mid,
-                    "markerWidth": "10",
-                    "markerHeight": "10",
-                    "refX": "9",
-                    "refY": "5",
-                    "orient": "auto",
-                    "markerUnits": "userSpaceOnUse",
-                })
+                marker_elem = Element(
+                    "marker",
+                    {
+                        "id": mid,
+                        "markerWidth": "10",
+                        "markerHeight": "10",
+                        "refX": "9",
+                        "refY": "5",
+                        "orient": "auto",
+                        "markerUnits": "userSpaceOnUse",
+                    },
+                )
                 path_d, fill, stroke = marker_defs
-                SubElement(marker_elem, "path", {
-                    "d": path_d,
-                    "fill": fill,
-                    "stroke": stroke,
-                    "stroke-width": "1",
-                })
+                SubElement(
+                    marker_elem,
+                    "path",
+                    {
+                        "d": path_d,
+                        "fill": fill,
+                        "stroke": stroke,
+                        "stroke-width": "1",
+                    },
+                )
                 defs.append(marker_elem)
 
     def _add_filters(self, defs: Element) -> None:
-        shadow_filter = Element("filter", {
-            "id": "pidraw-shadow",
-            "x": "-10%", "y": "-10%",
-            "width": "130%", "height": "130%",
-        })
-        SubElement(shadow_filter, "feDropShadow", {
-            "dx": "2", "dy": "3",
-            "stdDeviation": "3",
-            "flood-color": "rgba(0,0,0,0.2)",
-        })
+        shadow_filter = Element(
+            "filter",
+            {
+                "id": "pidraw-shadow",
+                "x": "-10%",
+                "y": "-10%",
+                "width": "130%",
+                "height": "130%",
+            },
+        )
+        SubElement(
+            shadow_filter,
+            "feDropShadow",
+            {
+                "dx": "2",
+                "dy": "3",
+                "stdDeviation": "3",
+                "flood-color": "rgba(0,0,0,0.2)",
+            },
+        )
         defs.append(shadow_filter)
 
     def _render_node(self, parent: Element, node: Node, diagram: Diagram) -> None:
@@ -191,10 +215,16 @@ class SvgBackend:
             d += f"L{x2},{y2}"
             path_attrs["d"] = d
 
-        arrow_end = ArrowStyle(style.arrow_end) if isinstance(style.arrow_end, str) else style.arrow_end
+        arrow_end = (
+            ArrowStyle(style.arrow_end) if isinstance(style.arrow_end, str) else style.arrow_end
+        )
         if arrow_end != ArrowStyle.NONE:
             path_attrs["marker-end"] = f"url(#pidraw-arrow-{arrow_end.value})"
-        arrow_start = ArrowStyle(style.arrow_start) if isinstance(style.arrow_start, str) else style.arrow_start
+        arrow_start = (
+            ArrowStyle(style.arrow_start)
+            if isinstance(style.arrow_start, str)
+            else style.arrow_start
+        )
         if arrow_start != ArrowStyle.NONE:
             path_attrs["marker-start"] = f"url(#pidraw-arrow-{arrow_start.value})"
 
@@ -215,16 +245,20 @@ class SvgBackend:
         lines = label.text.split("\n") if label.text else [""]
         line_h = style.font_size * style.line_height
 
-        text = SubElement(parent, "text", {
-            "x": str(cx),
-            "y": str(cy),
-            "text-anchor": "middle",
-            "dominant-baseline": "central",
-            "font-family": style.font_family,
-            "font-size": f"{style.font_size}px",
-            "font-weight": style.font_weight.value,
-            "fill": style.text_color,
-        })
+        text = SubElement(
+            parent,
+            "text",
+            {
+                "x": str(cx),
+                "y": str(cy),
+                "text-anchor": "middle",
+                "dominant-baseline": "central",
+                "font-family": style.font_family,
+                "font-size": f"{style.font_size}px",
+                "font-weight": style.font_weight.value,
+                "fill": style.text_color,
+            },
+        )
 
         if len(lines) == 1:
             text.text = lines[0]
@@ -232,10 +266,14 @@ class SvgBackend:
             total_h = line_h * (len(lines) - 1)
             for i, line in enumerate(lines):
                 dy = -total_h / 2 if i == 0 else line_h
-                tspan = SubElement(text, "tspan", {
-                    "x": str(cx),
-                    "dy": str(dy),
-                })
+                tspan = SubElement(
+                    text,
+                    "tspan",
+                    {
+                        "x": str(cx),
+                        "dy": str(dy),
+                    },
+                )
                 tspan.text = line if line else " "
 
     def _render_group(self, parent: Element, group: Group, diagram: Diagram) -> None:
@@ -244,17 +282,21 @@ class SvgBackend:
         size = group.size
         if pos is not None and size is not None:
             style = Style.merge(diagram.style, group.style)
-            SubElement(g, "rect", {
-                "x": str(pos.x),
-                "y": str(pos.y),
-                "width": str(size.width),
-                "height": str(size.height),
-                "fill": style.fill_color,
-                "fill-opacity": "0.05",
-                "stroke": style.stroke_color,
-                "stroke-width": str(style.stroke_width),
-                "stroke-dasharray": "6,3",
-            })
+            SubElement(
+                g,
+                "rect",
+                {
+                    "x": str(pos.x),
+                    "y": str(pos.y),
+                    "width": str(size.width),
+                    "height": str(size.height),
+                    "fill": style.fill_color,
+                    "fill-opacity": "0.05",
+                    "stroke": style.stroke_color,
+                    "stroke-width": str(style.stroke_width),
+                    "stroke-dasharray": "6,3",
+                },
+            )
             # Don't render group label - parent node serves as visual header
 
 

@@ -87,7 +87,5 @@ async def arender_file(path: str, **kwargs: object) -> RenderResult:
         async with aiofiles.open(path, encoding="utf-8") as f:  # type: ignore[union-attr]
             source = await f.read()  # type: ignore[union-attr]
     except ImportError:
-        source = await asyncio.to_thread(
-            lambda: open(path, "r", encoding="utf-8").read()
-        )
+        source = await asyncio.to_thread(lambda: open(path, "r", encoding="utf-8").read())
     return await arender(source, **kwargs)

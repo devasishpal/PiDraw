@@ -19,7 +19,7 @@ def validate_svg(svg: str) -> bool:
     if not svg or not svg.strip():
         raise SVGValidationError("SVG content is empty")
 
-    if not re.search(r'<svg[\s>]', svg, re.IGNORECASE):
+    if not re.search(r"<svg[\s>]", svg, re.IGNORECASE):
         raise SVGValidationError("No <svg> root element found")
 
     try:

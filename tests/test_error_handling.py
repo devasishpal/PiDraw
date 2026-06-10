@@ -55,7 +55,9 @@ class TestErrorHierarchy:
         assert exc.language == "foo"
 
     def test_engine_not_available(self) -> None:
-        exc = EngineNotAvailableError("mmdc", setup_command="npm install -g @mermaid-js/mermaid-cli")
+        exc = EngineNotAvailableError(
+            "mmdc", setup_command="npm install -g @mermaid-js/mermaid-cli"
+        )
         assert "mmdc" in str(exc)
         assert "npm install" in str(exc)
         assert exc.engine == "mmdc"

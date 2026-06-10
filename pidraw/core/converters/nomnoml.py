@@ -19,13 +19,13 @@ from pidraw.core.models import (
     Style,
 )
 
-_CLASS_PATTERN = re.compile(r'\[([^\]]*)\]')
-_STEREOTYPE_PATTERN = re.compile(r'<([^>]+)>')
+_CLASS_PATTERN = re.compile(r"\[([^\]]*)\]")
+_STEREOTYPE_PATTERN = re.compile(r"<([^>]+)>")
 _RELATION_PATTERN = re.compile(
-    r'\[([^\]]+)\]\s*(<->|->|\.->|\.\.>|-->|->o|->x|x->|x--x|-/->|==>|\.\.|-\.-|-/-|\.\.\.|--|\.\.)\s*\[([^\]]+)\]'
+    r"\[([^\]]+)\]\s*(<->|->|\.->|\.\.>|-->|->o|->x|x->|x--x|-/->|==>|\.\.|-\.-|-/-|\.\.\.|--|\.\.)\s*\[([^\]]+)\]"
 )
-_STYLE_DIRECTIVE = re.compile(r'^\s*#(\w+)\s*:\s*(.+)$')
-_SEPARATOR = re.compile(r'\|')
+_STYLE_DIRECTIVE = re.compile(r"^\s*#(\w+)\s*:\s*(.+)$")
+_SEPARATOR = re.compile(r"\|")
 
 
 def _ensure_class(class_defs: dict, raw: str) -> None:
@@ -178,13 +178,15 @@ class NomnomlConverter(DiagramConverter):
             diagram.add_node(node)
 
         if node_counter == 0:
-            diagram.add_node(Node(
-                id="n0",
-                label=Label(text="Diagram"),
-                size=Size(140, 50),
-                position=Position(20, 20),
-                shape=Shape(shape_type=ShapeType.RECTANGLE),
-            ))
+            diagram.add_node(
+                Node(
+                    id="n0",
+                    label=Label(text="Diagram"),
+                    size=Size(140, 50),
+                    position=Position(20, 20),
+                    shape=Shape(shape_type=ShapeType.RECTANGLE),
+                )
+            )
 
         for src_name, arrow_type, tgt_name in relationships:
             src_node = self._find_node(diagram, src_name)

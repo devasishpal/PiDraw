@@ -16,6 +16,7 @@ class TestCacheManager:
 
     def teardown_method(self) -> None:
         import shutil
+
         shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
     def test_set_and_get(self) -> None:
@@ -60,6 +61,7 @@ class TestCacheManager:
 
     def test_ttl_expiry(self) -> None:
         import time
+
         cache = CacheManager(ttl_seconds=0.1)
         cache.set("tmp", "<svg>tmp</svg>")
         assert cache.get("tmp") == "<svg>tmp</svg>"
@@ -103,14 +105,17 @@ class TestCacheDiskFailure:
             assert cache.get("anything") is None
         finally:
             import shutil
+
             shutil.rmtree(tmp, ignore_errors=True)
 
     def test_missing_cache_dir(self) -> None:
         import tempfile
+
         d = tempfile.mkdtemp()
         os.rmdir(d)
         cache = CacheManager(cache_dir=d)
         cache.set("k", "<svg/>")
         assert cache.get("k") == "<svg/>"
         import shutil
+
         shutil.rmtree(d, ignore_errors=True)

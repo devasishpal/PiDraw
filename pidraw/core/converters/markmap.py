@@ -62,8 +62,14 @@ class MarkmapConverter(DiagramConverter):
         heading_stack.append((0, root))
 
         color_palette = [
-            "#4a90d9", "#50b86c", "#e8a838", "#d96060",
-            "#8e6cc0", "#3fb4b4", "#d97a3a", "#b45f8a",
+            "#4a90d9",
+            "#50b86c",
+            "#e8a838",
+            "#d96060",
+            "#8e6cc0",
+            "#3fb4b4",
+            "#d97a3a",
+            "#b45f8a",
         ]
 
         level_font_sizes = {1: 18, 2: 15, 3: 13, 4: 12, 5: 11, 6: 11}

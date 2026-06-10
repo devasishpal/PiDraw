@@ -18,17 +18,17 @@ from pidraw.core.models import (
 )
 
 _EDGE_D2 = re.compile(
-    r'(\w[\w\d_.]*)\s*(<[-=]*|[-=]*[->]|<[-=]*[->])\s*(\w[\w\d_.]*)'
-    r'(?:\s*:\s*(.+))?'
+    r"(\w[\w\d_.]*)\s*(<[-=]*|[-=]*[->]|<[-=]*[->])\s*(\w[\w\d_.]*)"
+    r"(?:\s*:\s*(.+))?"
 )
 
-_NODE_D2 = re.compile(r'^(\w[\w\d_.]*)\s*:\s*(\w+)')
+_NODE_D2 = re.compile(r"^(\w[\w\d_.]*)\s*:\s*(\w+)")
 
-_CONTAINER_D2 = re.compile(r'^(\w[\w\d_.]*)\s*\{\s*$')
+_CONTAINER_D2 = re.compile(r"^(\w[\w\d_.]*)\s*\{\s*$")
 
-_STYLE_PROP = re.compile(r'style\.\w+' r'(?:\.\w+)?\s*:\s*(.+)')
+_STYLE_PROP = re.compile(r"style\.\w+" r"(?:\.\w+)?\s*:\s*(.+)")
 
-_DIRECTIVE = re.compile(r'^(direction|shape|style|link|icon|constraint|near)', re.IGNORECASE)
+_DIRECTIVE = re.compile(r"^(direction|shape|style|link|icon|constraint|near)", re.IGNORECASE)
 
 _SHAPE_MAP: dict[str, ShapeType] = {
     "rectangle": ShapeType.RECTANGLE,
@@ -53,7 +53,9 @@ class D2Converter(DiagramConverter):
 
     def parse(self, source: str) -> Diagram:
         diagram = Diagram(id="d2_diagram", title="D2 Diagram")
-        diagram.layout = Layout(layout_type=LayoutType.FLOW, direction="TB", node_spacing=50, layer_spacing=70)
+        diagram.layout = Layout(
+            layout_type=LayoutType.FLOW, direction="TB", node_spacing=50, layer_spacing=70
+        )
 
         lines = source.strip().split("\n")
         in_container: list[str] = []
@@ -78,12 +80,12 @@ class D2Converter(DiagramConverter):
 
             if in_styles:
                 # Parse: parent.child: { prop: value }
-                style_match = re.match(r'([\w.]+)\s*:\s*\{', stripped)
+                style_match = re.match(r"([\w.]+)\s*:\s*\{", stripped)
                 if style_match:
                     target = style_match.group(1)
                     # Collect properties until we hit }
                     props = {}
-                    style_lines = lines[lines.index(line) + 1:]
+                    style_lines = lines[lines.index(line) + 1 :]
                     for sl in style_lines:
                         sls = sl.strip()
                         if sls == "}":
@@ -172,8 +174,12 @@ class D2Converter(DiagramConverter):
                 fill = props.get("fill")
                 stroke = props.get("stroke")
                 node.style = Style(
-                    fill_color=fill if fill else (node.style.fill_color if node.style else Style().fill_color),
-                    stroke_color=stroke if stroke else (node.style.stroke_color if node.style else Style().stroke_color),
+                    fill_color=fill
+                    if fill
+                    else (node.style.fill_color if node.style else Style().fill_color),
+                    stroke_color=stroke
+                    if stroke
+                    else (node.style.stroke_color if node.style else Style().stroke_color),
                 )
 
         return diagram

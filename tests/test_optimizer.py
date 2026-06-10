@@ -264,7 +264,7 @@ class TestRemoveComments:
     def test_removes_multiline_comments(self) -> None:
         svg = (
             '<svg xmlns="http://www.w3.org/2000/svg">'
-            '<!--\nmulti\nline\n-->'
+            "<!--\nmulti\nline\n-->"
             '<rect width="10" height="10"/></svg>'
         )
         result = optimize_svg(svg, passes=["remove_comments"])
@@ -399,7 +399,7 @@ class TestSimplifyPaths:
 class TestTrimWhitespace:
     def test_collapses_extra_space(self) -> None:
         result = optimize_svg(SVG_WHITESPACE_HEAVY, passes=["trim_whitespace"])
-        assert '  ' not in result.svg
+        assert "  " not in result.svg
 
     def test_preserves_text_content(self) -> None:
         svg = '<svg xmlns="http://www.w3.org/2000/svg"><text>hello world</text></svg>'
@@ -644,7 +644,7 @@ class TestSafety:
     def test_style_preserved(self) -> None:
         svg = (
             '<svg xmlns="http://www.w3.org/2000/svg">'
-            '<style>.red{fill:red;}</style>'
+            "<style>.red{fill:red;}</style>"
             '<rect class="red" width="10" height="10"/></svg>'
         )
         result = optimize_svg(svg, passes=[p for p in DEFAULT_PASSES if p != "trim_whitespace"])

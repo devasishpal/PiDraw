@@ -16,6 +16,7 @@ from pidraw.registry import clear_registry, register_renderer
 # Fixtures
 # ------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_mmdc_path() -> Generator[None, None, None]:
     with patch.object(MermaidRenderer, "_find_mmdc", return_value="/usr/bin/mmdc"):
@@ -31,6 +32,7 @@ def renderer(mock_mmdc_path: Any) -> MermaidRenderer:
 # Construction
 # ------------------------------------------------------------------
 
+
 class TestConstruction:
     def test_find_mmdc_raises_when_missing(self) -> None:
         with patch("pidraw.engines.mermaid.shutil.which", return_value=None):
@@ -45,6 +47,7 @@ class TestConstruction:
 # ------------------------------------------------------------------
 # Input validation
 # ------------------------------------------------------------------
+
 
 class TestInputValidation:
     def test_empty_source_raises(self, renderer: MermaidRenderer) -> None:
@@ -69,6 +72,7 @@ class TestInputValidation:
 # Output validation
 # ------------------------------------------------------------------
 
+
 class TestOutputValidation:
     def test_empty_svg_raises(self, renderer: MermaidRenderer) -> None:
         """Native empty + mmdc empty returns native output (degraded but not crashing)."""
@@ -89,12 +93,16 @@ class TestOutputValidation:
 # mmdc subprocess invocation
 # ------------------------------------------------------------------
 
+
 def _completed(
-    returncode: int = 0, stderr: str = "",
+    returncode: int = 0,
+    stderr: str = "",
 ) -> subprocess.CompletedProcess[bytes]:
     return subprocess.CompletedProcess(
-        args=["mmdc"], returncode=returncode,
-        stdout=b"", stderr=stderr.encode("utf-8"),
+        args=["mmdc"],
+        returncode=returncode,
+        stdout=b"",
+        stderr=stderr.encode("utf-8"),
     )
 
 
@@ -206,11 +214,13 @@ class TestMmdcInvocation:
 # Auto-registration
 # ------------------------------------------------------------------
 
+
 class TestAutoRegistration:
     def test_mermaid_renderer_can_be_registered(self) -> None:
         clear_registry()
         register_renderer("mermaid", MermaidRenderer(mmdc_path="/fake/mmdc"))
         from pidraw.registry import get_renderer
+
         r = get_renderer("mermaid")
         assert isinstance(r, MermaidRenderer)
 
@@ -226,5 +236,6 @@ class TestAutoRegistration:
             patch.object(r, "_run_mmdc", return_value=fake_svg),
         ):
             from pidraw.renderer import render as public_render
+
             result = public_render("graph TD; A-->B;")
             assert result.svg == fake_svg

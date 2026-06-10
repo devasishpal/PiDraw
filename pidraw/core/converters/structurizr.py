@@ -95,17 +95,25 @@ def _try_parse_element(tokens: list[str], pos: int) -> tuple[dict | None, int]:
     p4 = p3
     if p3 < len(tokens) and tokens[p3].startswith('"'):
         tech, p4 = _read_string(tokens, p3)
-    return {"id": name, "type": etype, "name": name, "description": desc or "", "technology": tech or ""}, p4
+    return {
+        "id": name,
+        "type": etype,
+        "name": name,
+        "description": desc or "",
+        "technology": tech or "",
+    }, p4
 
 
 def _tokenize(source: str) -> list[str]:
-    cleaned = re.sub(r'//[^\n]*', '', source)
+    cleaned = re.sub(r"//[^\n]*", "", source)
     cleaned = cleaned.replace("\n", " ").replace("\r", " ")
-    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return _TOKEN_PATTERN.findall(cleaned)
 
 
-def _parse_model(tokens: list[str], pos: int, parent_id: str | None = None) -> tuple[dict[str, Any], int]:
+def _parse_model(
+    tokens: list[str], pos: int, parent_id: str | None = None
+) -> tuple[dict[str, Any], int]:
     elements: dict[str, dict[str, Any]] = {}
     relationships: list[dict[str, Any]] = []
     while pos < len(tokens):
@@ -168,8 +176,10 @@ class StructurizrConverter(DiagramConverter):
         diagram = Diagram(id="structurizr_diagram", title="Structurizr Diagram")
         diagram.layout = Layout(layout_type=LayoutType.NONE)
         diagram.style = Style(
-            font_family="sans-serif", font_size=13,
-            fill_color="#ffffff", stroke_color="#333333",
+            font_family="sans-serif",
+            font_size=13,
+            fill_color="#ffffff",
+            stroke_color="#333333",
         )
 
         tokens = _tokenize(source)
@@ -224,12 +234,16 @@ class StructurizrConverter(DiagramConverter):
             label_h = len(parts) * 20 + 12
             return Node(
                 id=eid,
-                label=Label(text=display if len(parts) > 1 else ename, width=label_w, height=label_h),
+                label=Label(
+                    text=display if len(parts) > 1 else ename, width=label_w, height=label_h
+                ),
                 shape=Shape(shape_type=_SHAPE_MAP.get(etype, ShapeType.RECTANGLE)),
                 size=Size(label_w, label_h),
                 style=Style(
-                    fill_color=bg_color, stroke_color=text_color,
-                    text_color=text_color, stroke_width=2,
+                    fill_color=bg_color,
+                    stroke_color=text_color,
+                    text_color=text_color,
+                    stroke_width=2,
                     font_size=12 if etype == "Person" else 13,
                     font_family="sans-serif",
                 ),
@@ -281,7 +295,19 @@ class StructurizrConverter(DiagramConverter):
             if pid and pid in elements:
                 continue
             if eid in group_map:
-                _layout_parent_with_children(eid, node_map, group_map, children_of, pad_x, y_cursor, node_w, node_h, group_pad, gap_y, elements)
+                _layout_parent_with_children(
+                    eid,
+                    node_map,
+                    group_map,
+                    children_of,
+                    pad_x,
+                    y_cursor,
+                    node_w,
+                    node_h,
+                    group_pad,
+                    gap_y,
+                    elements,
+                )
                 g = group_map[eid]
                 y_cursor = g.position.y + g.size.height + gap_y
             else:
@@ -311,23 +337,45 @@ class StructurizrConverter(DiagramConverter):
                 txt = rel["description"]
                 if rel["technology"]:
                     txt = f"{txt} [{rel['technology']}]" if txt else f"[{rel['technology']}]"
-                diagram.add_edge(Edge(
-                    id=f"{src}->{tgt}",
-                    source=sn.id, target=tn.id,
-                    label=Label(text=txt) if txt else None,
-                    style=Style(arrow_end=ArrowStyle.TRIANGLE_FILLED, stroke_color="#333", stroke_width=1.5),
-                ))
+                diagram.add_edge(
+                    Edge(
+                        id=f"{src}->{tgt}",
+                        source=sn.id,
+                        target=tn.id,
+                        label=Label(text=txt) if txt else None,
+                        style=Style(
+                            arrow_end=ArrowStyle.TRIANGLE_FILLED,
+                            stroke_color="#333",
+                            stroke_width=1.5,
+                        ),
+                    )
+                )
 
         if not diagram.all_nodes() and not diagram.groups:
-            diagram.add_node(Node(id="empty", label=Label(text="No elements defined"), size=Size(200, 60), position=Position(20, 20)))
+            diagram.add_node(
+                Node(
+                    id="empty",
+                    label=Label(text="No elements defined"),
+                    size=Size(200, 60),
+                    position=Position(20, 20),
+                )
+            )
 
         return diagram
 
 
 def _layout_parent_with_children(
-    eid: str, node_map: dict, group_map: dict, children_of: dict,
-    x0: float, y0: float, def_w: float, def_h: float,
-    group_pad: float, gap_y: float, elements: dict,
+    eid: str,
+    node_map: dict,
+    group_map: dict,
+    children_of: dict,
+    x0: float,
+    y0: float,
+    def_w: float,
+    def_h: float,
+    group_pad: float,
+    gap_y: float,
+    elements: dict,
 ) -> None:
     group = group_map[eid]
     kids = children_of.get(eid, [])

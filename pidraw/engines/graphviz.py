@@ -118,9 +118,7 @@ class GraphvizRenderer(BaseRenderer):
                 check=False,
             )
         except FileNotFoundError:
-            raise RenderError(
-                "graphviz", f"dot executable not found at '{self._dot_path}'"
-            )
+            raise RenderError("graphviz", f"dot executable not found at '{self._dot_path}'")
         except subprocess.TimeoutExpired:
             raise RenderTimeoutError("graphviz", _RENDER_TIMEOUT)
         except Exception as exc:

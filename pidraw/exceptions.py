@@ -86,9 +86,7 @@ class RenderingError(PiDrawError):
     Deprecated: use RenderError instead.
     """
 
-    def __init__(
-        self, message: str = "", language: str = "", stderr: str = ""
-    ) -> None:
+    def __init__(self, message: str = "", language: str = "", stderr: str = "") -> None:
         self.language = language
         self.stderr = stderr
         if message and not language:

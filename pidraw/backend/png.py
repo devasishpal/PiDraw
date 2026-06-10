@@ -72,9 +72,7 @@ def svg_to_png(
             transparent=transparent,
         )
     except Exception as exc:
-        raise PngConversionError(
-            f"{backend.__name__} failed: {exc}"
-        ) from exc
+        raise PngConversionError(f"{backend.__name__} failed: {exc}") from exc
     if transparent and trim:
         result = trim_png(result)
     return result
@@ -113,8 +111,7 @@ def _detect_backend() -> BackendFn:
         "  Install resvg CLI:  https://github.com/RazrFalcon/resvg/releases\n"
         "  pip install pidraw[png-playwright] && playwright install chromium\n"
         "  pip install pidraw[png]        (cairosvg - needs Cairo DLLs)\n\n"
-        "Detected issues:\n"
-        + "\n".join(f"  - {e}" for e in errors)
+        "Detected issues:\n" + "\n".join(f"  - {e}" for e in errors)
     )
 
 

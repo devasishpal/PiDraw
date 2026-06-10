@@ -1,4 +1,5 @@
 """Setup script — auto-installs CLI tools after pip install."""
+
 import subprocess
 import sys
 
@@ -11,7 +12,9 @@ def _run_pidraw_setup():
     try:
         subprocess.run(
             [sys.executable, "-m", "pidraw", "setup"],
-            capture_output=True, text=True, timeout=600,
+            capture_output=True,
+            text=True,
+            timeout=600,
         )
     except Exception:
         pass
@@ -29,7 +32,9 @@ class PostDevelopCommand(develop):
         _run_pidraw_setup()
 
 
-setup(cmdclass={
-    "install": PostInstallCommand,
-    "develop": PostDevelopCommand,
-})
+setup(
+    cmdclass={
+        "install": PostInstallCommand,
+        "develop": PostDevelopCommand,
+    }
+)

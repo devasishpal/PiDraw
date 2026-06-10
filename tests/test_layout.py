@@ -52,9 +52,11 @@ class TestFlowLayout:
         d = _simple_diagram()
         d.layout = Layout(layout_type=LayoutType.FLOW, direction="TB")
         result = apply_layout(d)
-        positions = [(n.position.y if n.position else 0, n.position.x if n.position else 0)
-                     for n in [result.get_node("a"), result.get_node("b"), result.get_node("c")]
-                     if n is not None and n.position is not None]
+        positions = [
+            (n.position.y if n.position else 0, n.position.x if n.position else 0)
+            for n in [result.get_node("a"), result.get_node("b"), result.get_node("c")]
+            if n is not None and n.position is not None
+        ]
         # Should be in increasing y
         for i in range(len(positions) - 1):
             assert positions[i][0] <= positions[i + 1][0]

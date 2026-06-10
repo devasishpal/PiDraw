@@ -1,4 +1,5 @@
 """Tests for the parallel rendering pool."""
+
 from __future__ import annotations
 
 from pidraw.pool import PoolRenderResult, RenderPool, summarize

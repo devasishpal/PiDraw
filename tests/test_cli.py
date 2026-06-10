@@ -282,6 +282,7 @@ class TestBatch:
             assert result.exit_code == 1
         finally:
             import shutil
+
             shutil.rmtree(d)
 
     def test_batch_with_workers(self) -> None:

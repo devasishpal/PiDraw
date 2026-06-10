@@ -1,4 +1,5 @@
 """Renderer for Vega visualisation schemas via ``vg2svg`` CLI (npm)."""
+
 from __future__ import annotations
 
 import os
@@ -24,6 +25,7 @@ class VegaRenderer(BaseRenderer):
         self._vl_convert = None
         try:
             import vl_convert as _vlc
+
             self._vl_convert = _vlc
         except ImportError:
             pass
@@ -55,11 +57,13 @@ class VegaRenderer(BaseRenderer):
         assert self._vl_convert is not None
         try:
             import json
+
             spec = json.loads(source)
             svg = str(self._vl_convert.vega_to_svg(spec))
             if not svg or "<svg" not in svg:
                 raise RenderError("vega", "vl-convert returned invalid SVG")
             import xml.etree.ElementTree as ET
+
             try:
                 ET.fromstring(svg)
             except ET.ParseError as exc:
@@ -82,7 +86,9 @@ class VegaRenderer(BaseRenderer):
             assert self._resolved is not None
             result = subprocess.run(
                 [self._resolved, input_path],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode != 0:
                 raise RenderError(
@@ -95,6 +101,7 @@ class VegaRenderer(BaseRenderer):
             if "<svg" not in svg:
                 raise RenderError("vega", "vg2svg output does not contain <svg>")
             import xml.etree.ElementTree as ET
+
             try:
                 ET.fromstring(svg)
             except ET.ParseError as exc:
@@ -109,4 +116,5 @@ class VegaRenderer(BaseRenderer):
         finally:
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh
+
                 sh.rmtree(tmp_dir, ignore_errors=True)

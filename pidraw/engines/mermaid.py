@@ -1,4 +1,5 @@
 """Mermaid diagram renderer with native fallback then mmdc CLI fallback."""
+
 from __future__ import annotations
 
 import os
@@ -15,9 +16,7 @@ _MAX_INPUT_SIZE = 100 * 1024
 _RENDER_TIMEOUT = 30
 _SVG_ROOT_RE = re.compile(r"<\s*svg[\s>]", re.IGNORECASE)
 
-_EMPTY_SVG_RE = re.compile(
-    r"<g\s+id\s*=\s*[\"']nodes[\"']\s*/?\s*>", re.IGNORECASE
-)
+_EMPTY_SVG_RE = re.compile(r"<g\s+id\s*=\s*[\"']nodes[\"']\s*/?\s*>", re.IGNORECASE)
 
 # Diagram types natively supported by the converter
 _NATIVE_DIAGRAM_TYPES = {
@@ -83,10 +82,7 @@ class MermaidRenderer(BaseRenderer):
             )
 
         # Types not in NATIVE and not in CLI_ONLY — unknown
-        if (
-            dt_lower not in _NATIVE_DIAGRAM_TYPES
-            and dt_lower not in _CLI_ONLY_DIAGRAM_TYPES
-        ):
+        if dt_lower not in _NATIVE_DIAGRAM_TYPES and dt_lower not in _CLI_ONLY_DIAGRAM_TYPES:
             if self._has_mmdc:
                 svg = self._run_mmdc(source)
                 self._validate_output(svg)
@@ -192,9 +188,7 @@ class MermaidRenderer(BaseRenderer):
                 check=False,
             )
         except FileNotFoundError:
-            raise RenderError(
-                "mermaid", f"mmdc executable not found at '{self._mmdc_path}'"
-            )
+            raise RenderError("mermaid", f"mmdc executable not found at '{self._mmdc_path}'")
 
         if result.returncode != 0:
             stderr = result.stderr.decode("utf-8", errors="replace").strip()

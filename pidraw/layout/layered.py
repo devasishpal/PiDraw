@@ -55,8 +55,12 @@ class LayeredLayout(LayoutEngine):
         # Always recompute viewport from actual positions (layout engines may have overridden converter positions)
         min_x = min((n.position.x for n in nodes if n.position), default=0)
         min_y = min((n.position.y for n in nodes if n.position), default=0)
-        max_x = max((n.position.x + n.size.width for n in nodes if n.position and n.size), default=800)
-        max_y = max((n.position.y + n.size.height for n in nodes if n.position and n.size), default=600)
+        max_x = max(
+            (n.position.x + n.size.width for n in nodes if n.position and n.size), default=800
+        )
+        max_y = max(
+            (n.position.y + n.size.height for n in nodes if n.position and n.size), default=600
+        )
         cw = max_x - min_x
         ch = max_y - min_y
         pad = max(padding * 2, cw * 0.15, ch * 0.15)
@@ -89,9 +93,7 @@ class LayeredLayout(LayoutEngine):
 
         while remaining:
             layer = [
-                nid
-                for nid in remaining
-                if all(pred in assigned for pred in incoming.get(nid, []))
+                nid for nid in remaining if all(pred in assigned for pred in incoming.get(nid, []))
             ]
             if not layer:
                 candidates = sorted(remaining)

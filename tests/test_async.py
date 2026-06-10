@@ -1,4 +1,5 @@
 """Tests for async rendering API."""
+
 from __future__ import annotations
 
 import asyncio

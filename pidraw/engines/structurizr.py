@@ -67,12 +67,18 @@ class StructurizrRenderer(BaseRenderer):
             assert self._resolved is not None
             result = subprocess.run(
                 [
-                    self._resolved, "export",
-                    "-w", dsl_path,
-                    "-f", "plantuml",
-                    "-o", puml_dir,
+                    self._resolved,
+                    "export",
+                    "-w",
+                    dsl_path,
+                    "-f",
+                    "plantuml",
+                    "-o",
+                    puml_dir,
                 ],
-                capture_output=True, text=True, timeout=60,
+                capture_output=True,
+                text=True,
+                timeout=60,
             )
             if result.returncode != 0:
                 raise RenderError(
@@ -111,6 +117,7 @@ class StructurizrRenderer(BaseRenderer):
         finally:
             if tmp_dir and os.path.isdir(tmp_dir):
                 import shutil as sh
+
                 sh.rmtree(tmp_dir, ignore_errors=True)
 
     def _render_native(self, source: str) -> str:

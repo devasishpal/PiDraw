@@ -17,6 +17,7 @@ from pidraw.registry import clear_registry, register_renderer
 # Fixtures
 # ------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_cmd() -> Generator[None, None, None]:
     with patch.object(PlantUMLRenderer, "_resolve_command", return_value=["/usr/bin/plantuml"]):
@@ -31,6 +32,7 @@ def renderer(mock_cmd: Any) -> PlantUMLRenderer:
 # ------------------------------------------------------------------
 # Utility function tests
 # ------------------------------------------------------------------
+
 
 class TestFindUtils:
     def test_find_java_missing(self) -> None:
@@ -89,6 +91,7 @@ class TestFindUtils:
 # Command resolution
 # ------------------------------------------------------------------
 
+
 class TestCommandResolution:
     def test_explicit_plantuml_path(self) -> None:
         cmd = PlantUMLRenderer._resolve_command(plantuml_path="/custom/plantuml")
@@ -96,7 +99,8 @@ class TestCommandResolution:
 
     def test_explicit_java_jar(self) -> None:
         cmd = PlantUMLRenderer._resolve_command(
-            java_path="/usr/bin/java", jar_path="/opt/plantuml.jar",
+            java_path="/usr/bin/java",
+            jar_path="/opt/plantuml.jar",
         )
         assert cmd == ["/usr/bin/java", "-jar", "/opt/plantuml.jar"]
 
@@ -127,6 +131,7 @@ class TestCommandResolution:
 # Construction
 # ------------------------------------------------------------------
 
+
 class TestConstruction:
     def test_explicit_plantuml_path(self) -> None:
         r = PlantUMLRenderer(plantuml_path="/custom/plantuml")
@@ -140,6 +145,7 @@ class TestConstruction:
 # ------------------------------------------------------------------
 # Input validation
 # ------------------------------------------------------------------
+
 
 class TestInputValidation:
     def test_empty_source_raises(self, renderer: PlantUMLRenderer) -> None:
@@ -164,6 +170,7 @@ class TestInputValidation:
 # Output validation
 # ------------------------------------------------------------------
 
+
 class TestOutputValidation:
     def test_empty_output_raises(self, renderer: PlantUMLRenderer) -> None:
         with patch.object(renderer, "_run_plantuml", return_value=""):
@@ -186,13 +193,16 @@ class TestOutputValidation:
 # PlantUML subprocess invocation
 # ------------------------------------------------------------------
 
+
 def _completed(
     returncode: int = 0,
     stderr: str = "",
 ) -> subprocess.CompletedProcess[bytes]:
     return subprocess.CompletedProcess(
-        args=["plantuml"], returncode=returncode,
-        stdout=b"", stderr=stderr.encode("utf-8"),
+        args=["plantuml"],
+        returncode=returncode,
+        stdout=b"",
+        stderr=stderr.encode("utf-8"),
     )
 
 
@@ -396,11 +406,13 @@ class TestPlantUMLInvocation:
 # Auto-registration
 # ------------------------------------------------------------------
 
+
 class TestAutoRegistration:
     def test_plantuml_renderer_can_be_registered(self) -> None:
         clear_registry()
         register_renderer("plantuml", PlantUMLRenderer(plantuml_path="/fake/plantuml"))
         from pidraw.registry import get_renderer
+
         r = get_renderer("plantuml")
         assert isinstance(r, PlantUMLRenderer)
 
@@ -412,6 +424,7 @@ class TestAutoRegistration:
         fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
         with patch.object(r, "_run_plantuml", return_value=fake_svg):
             from pidraw.renderer import render as public_render
+
             result = public_render("@startuml\nA -> B\n@enduml")
             assert result.svg == fake_svg
 
