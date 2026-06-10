@@ -271,11 +271,17 @@ class StructurizrConverter(DiagramConverter):
             diagram.add_group(group)
 
             parent_node = node_map[eid]
-            parent_node.label = Label(text=edata["name"], width=parent_node.label.width, height=28)
+            label = parent_node.label
+            style = parent_node.style
+            parent_node.label = Label(
+                text=edata["name"],
+                width=label.width if label else 220,
+                height=28,
+            )
             parent_node.style = Style(
-                fill_color=parent_node.style.fill_color,
-                stroke_color=parent_node.style.stroke_color,
-                text_color=parent_node.style.stroke_color,
+                fill_color=style.fill_color if style else "#dae8fc",
+                stroke_color=style.stroke_color if style else "#6c8ebf",
+                text_color=style.stroke_color if style else "#6c8ebf",
                 stroke_width=0,
                 font_size=13,
                 font_weight=FontWeight.BOLD,
@@ -288,7 +294,7 @@ class StructurizrConverter(DiagramConverter):
         pad_y = 30
         gap_y = 30
         group_pad = 20
-        y_cursor = pad_y
+        y_cursor = float(pad_y)
 
         for eid in elements:
             pid = elements[eid].get("parent")
@@ -309,19 +315,25 @@ class StructurizrConverter(DiagramConverter):
                     elements,
                 )
                 g = group_map[eid]
-                y_cursor = g.position.y + g.size.height + gap_y
+                gpos = g.position
+                gsz = g.size
+                y_cursor = (gpos.y if gpos else 0) + (gsz.height if gsz else 0) + gap_y
             else:
                 n = node_map[eid]
-                n.position = Position(pad_x + (node_w - n.size.width) / 2, y_cursor + 10)
-                n.size = Size(max(n.size.width, node_w), max(n.size.height, node_h))
-                y_cursor += n.size.height + gap_y
+                nsz = n.size
+                nw = nsz.width if nsz else node_w
+                nh = nsz.height if nsz else node_h
+                n.position = Position(pad_x + (node_w - nw) / 2, y_cursor + 10)
+                n.size = Size(max(nw, node_w), max(nh, node_h))
+                y_cursor += float(max(nh, node_h) + gap_y)
 
-        max_x = 0
+        max_x = 0.0
         for n in node_map.values():
             if n.position:
-                max_x = max(max_x, n.position.x + n.size.width)
+                if n.position and n.size:
+                    max_x = max(max_x, n.position.x + n.size.width)
         for g in group_map.values():
-            if g.position:
+            if g.position and g.size:
                 max_x = max(max_x, g.position.x + g.size.width)
 
         vw = max(max_x + pad_x, 500)
@@ -387,9 +399,12 @@ def _layout_parent_with_children(
 
     for cid in kids:
         cn = node_map[cid]
-        cw = max(cn.size.width, def_w - group_pad * 2)
-        ch = max(cn.size.height, def_h)
-        cn.position = Position(x0 + group_pad + (cw - cn.size.width) / 2, child_y + 10)
+        csz = cn.size
+        cw = max(csz.width if csz else def_w, def_w - group_pad * 2)
+        ch = max(csz.height if csz else def_h, def_h)
+        cn.position = Position(
+            x0 + group_pad + (cw - (csz.width if csz else def_w)) / 2, child_y + 10
+        )
         cn.size = Size(cw, ch)
         child_y += ch + gap_y
 

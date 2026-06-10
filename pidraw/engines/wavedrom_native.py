@@ -294,7 +294,7 @@ class WaveDromNativeRenderer(BaseRenderer):
                 f'font-family="sans-serif" font-size="14" fill="#333">{_escape(str(head_text))}</text>'
             )
 
-        current_y = header_h + 20
+        current_y = float(header_h + 20)
         for idx, sig in enumerate(parsed_signals):
             name = sig["name"]
             points = sig["points"]

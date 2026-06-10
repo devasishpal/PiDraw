@@ -192,6 +192,7 @@ class PlantUMLRenderer(BaseRenderer):
             self._cleanup(tmp_dir)
 
     def _invoke_plantuml(self, input_path: str) -> None:
+        assert self._cmd is not None
         cmd: List[str] = self._cmd + [
             "-tsvg",
             "-quiet",

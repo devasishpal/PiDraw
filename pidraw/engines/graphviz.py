@@ -107,6 +107,7 @@ class GraphvizRenderer(BaseRenderer):
         return svg
 
     def _run_dot(self, source: str) -> str:
+        assert self._dot_path is not None
         cmd = [self._dot_path, "-Tsvg"]
 
         try:

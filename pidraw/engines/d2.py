@@ -127,6 +127,7 @@ class D2Renderer(BaseRenderer):
             self._cleanup(tmp_dir)
 
     def _invoke_d2(self, input_path: str, output_path: str) -> None:
+        assert self._d2_path is not None
         cmd = [
             self._d2_path,
             "--format=svg",

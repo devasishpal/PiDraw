@@ -52,9 +52,9 @@ def _render_element(elem: dict[str, Any]) -> str:
             f'stroke="{sc}" stroke-width="{sw}" fill="{fill}" opacity="{opacity}"/>'
         )
     elif t == "diamond":
-        pts = f"{x + w / 2},{y} {x + w},{y + h / 2} {x + w / 2},{y + h} {x},{y + h / 2}"
+        poly_pts = f"{x + w / 2},{y} {x + w},{y + h / 2} {x + w / 2},{y + h} {x},{y + h / 2}"
         parts.append(
-            f'<polygon points="{pts}" '
+            f'<polygon points="{poly_pts}" '
             f'stroke="{sc}" stroke-width="{sw}" fill="{fill}" opacity="{opacity}"/>'
         )
     elif t == "text":
@@ -67,8 +67,10 @@ def _render_element(elem: dict[str, Any]) -> str:
             f'fill="{sc}" opacity="{opacity}">{_escape(txt)}</text>'
         )
     elif t in ("arrow", "line"):
-        pts = elem.get("points", [])
-        if not pts or len(pts) < 2:
+        raw_pts = elem.get("points", [])
+        if isinstance(raw_pts, list) and len(raw_pts) >= 2:
+            pts = raw_pts
+        else:
             pts = [[0, 0], [w, h]]
         abs_pts = [(x + p[0], y + p[1]) for p in pts]
         d = " ".join(f"{'M' if i == 0 else 'L'}{px},{py}" for i, (px, py) in enumerate(abs_pts))
@@ -80,9 +82,9 @@ def _render_element(elem: dict[str, Any]) -> str:
             f'fill="none" opacity="{opacity}"{marker_end}/>'
         )
     elif t == "freedraw":
-        pts = elem.get("points", [])
-        if pts and len(pts) >= 2:
-            abs_pts = [(x + p[0], y + p[1]) for p in pts]
+        raw_fp = elem.get("points", [])
+        if isinstance(raw_fp, list) and len(raw_fp) >= 2:
+            abs_pts = [(x + p[0], y + p[1]) for p in raw_fp]
             d = " ".join(f"{'M' if i == 0 else 'L'}{px},{py}" for i, (px, py) in enumerate(abs_pts))
             parts.append(
                 f'<path d="{d}" stroke="{sc}" stroke-width="{max(sw, 1)}" '
