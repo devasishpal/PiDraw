@@ -1,10 +1,19 @@
 # PiDraw
 
+[![PyPI version](https://badge.fury.io/py/pidraw.svg)](https://badge.fury.io/py/pidraw)
+[![Python versions](https://img.shields.io/pypi/pyversions/pidraw.svg)](https://pypi.org/project/pidraw)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/pidraw?label=downloads%2Fmonth)](https://pypi.org/project/pidraw)
+[![PyPI - Total Downloads](https://img.shields.io/pepy/dt/pidraw)](https://pypi.org/project/pidraw)
+[![License](https://img.shields.io/pypi/l/pidraw.svg)](https://github.com/devasishpal/PiDraw/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/devasishpal/PiDraw?style=flat&logo=github)](https://github.com/devasishpal/PiDraw)
+[![GitHub last commit](https://img.shields.io/github/last-commit/devasishpal/PiDraw/main)](https://github.com/devasishpal/PiDraw)
+[![Changelog](https://img.shields.io/badge/changelog-latest-blue)](https://github.com/devasishpal/PiDraw/releases)
+
 > Universal diagram rendering platform — convert any diagram language to SVG or PNG.
 
-PiDraw renders source code from **18 diagram languages** into optimized SVG and PNG. All formats work with **zero CLI tools** — just `pip install pidraw` and done. Includes native TikZ support, SVG optimization, quality enhancement, caching, parallel batch processing, file watching, plugin architecture, and async APIs.
+PiDraw renders source code from **15 diagram languages** into optimized SVG and PNG. All formats work with **zero CLI tools** — just `pip install pidraw` and done. Includes native TikZ support, SVG optimization, quality enhancement, caching, parallel batch processing, file watching, plugin architecture, and async APIs.
 
-**v1.3.0 is fully batteries-included** — no npm, no Java, no LaTeX, no separate plugin installs.
+**Fully batteries-included** — no npm, no Java, no LaTeX, no separate plugin installs.
 
 ---
 
@@ -14,7 +23,6 @@ PiDraw renders source code from **18 diagram languages** into optimized SVG and 
 - [Quick Start](#quick-start)
 - [CLI Reference](#cli-reference)
 - [Supported Formats](#supported-formats)
-- [Batch Scripts (Windows)](#batch-scripts-windows)
 - [Python API](#python-api)
 - [Architecture](#architecture)
 - [Caching](#caching)
@@ -39,7 +47,7 @@ cd PiDraw
 pip install -e .
 ```
 
-That's it. All 18 diagram languages, all renderers, PNG export, and DOCX export work immediately with no extra tools.
+That's it. All 15 diagram languages, all renderers, PNG export, and DOCX export work immediately with no extra tools.
 
 ---
 
@@ -267,7 +275,6 @@ List all registered and discovered renderer plugins.
 
 ```bash
 pidraw plugins
-# Total: 4 registered, 15 available renderers
 ```
 
 ---
@@ -278,7 +285,6 @@ Show the PiDraw version.
 
 ```bash
 pidraw version
-# pidraw v1.3.0
 ```
 
 ---
@@ -291,7 +297,7 @@ List all supported diagram formats with live availability status.
 pidraw formats
 ```
 
-Shows a table with availability, converter support, CLI tool requirements, and notes for each of the 14+ supported languages.
+Shows a table with availability, converter support, CLI tool requirements, and notes for each of the 15 supported languages.
 
 ---
 
@@ -336,7 +342,7 @@ pidraw benchmark --quick
 | TikZ | `tikz` | `.tex` | **Native** (pure Python, subset) |
 | Kroki | `kroki` | `.txt`, `.kroki` | **HTTP API** (no CLI needed) |
 
-**All 18 formats work immediately with just `pip install pidraw`** — zero CLI tools required. Mermaid advanced types (gitgraph, quadrantChart, xychart, timeline, journey, mindmap, zenuml, sankey, requirementDiagram) additionally support `mmdc` CLI for enhanced output.
+**All 15 formats work immediately with just `pip install pidraw`** — zero CLI tools required. Mermaid advanced types (gitgraph, quadrantChart, xychart, timeline, journey, mindmap, zenuml, sankey, requirementDiagram) additionally support `mmdc` CLI for enhanced output.
 
 
 
@@ -474,7 +480,7 @@ detect_language()  ──►  Language ID (e.g. "mermaid")
     ▼
 get_renderer(language)  ──►  Engine Registry
     │
-      ├── NativeRenderer (for 10 converter-supported languages)
+      ├── NativeRenderer (for 9 converter-supported languages)
       │       ├── converter.parse(source) → Diagram model
       │       ├── apply_layout(diagram) → positioned nodes
       │       ├── apply_theme(diagram) → styled diagram
@@ -508,7 +514,7 @@ Each diagram format has a dedicated renderer engine in `pidraw/engines/`. Engine
 
 ### Converters
 
-9 formats have pure-Python parsers (`pidraw/core/converters/`) that produce an internal `Diagram` model, which `SvgBackend` renders to SVG — no CLI tools needed:
+10 formats have pure-Python parsers (`pidraw/core/converters/` or `pidraw/engines/`) that produce an internal `Diagram` model, which `SvgBackend` renders to SVG — no CLI tools needed:
 
 | Converter | What it parses |
 |---|---|---|
@@ -662,7 +668,7 @@ svgs = render_many(sources, language="mermaid")
 
 - Python >= 3.10
 
-**Everything works with just `pip install pidraw`** — no CLI tools, no Java, no Node.js, no LaTeX required. All 18 diagram languages, PNG export (via cairosvg), and DOCX export are included in the base install.
+**Everything works with just `pip install pidraw`** — no CLI tools, no Java, no Node.js, no LaTeX required. All 15 diagram languages, PNG export (via cairosvg), and DOCX export are included in the base install.
 
 ---
 
