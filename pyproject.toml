@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pidraw"
-version = "1.3.0"
+version = "1.3.1"
 description = "Universal diagram rendering platform — render any diagram language to SVG or PNG"
 readme = "README.md"
 license = { text = "MIT" }

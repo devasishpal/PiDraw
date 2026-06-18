@@ -365,6 +365,45 @@ class TestRemoveEmptyElements:
         assert "rect" in result.svg
         assert 'width="100"' in result.svg
 
+    def test_preserves_element_with_class(self) -> None:
+        svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect class="spacer" /></svg>'
+        result = optimize_svg(svg, passes=["remove_empty_elements"])
+        assert 'class="spacer"' in result.svg
+
+    def test_preserves_element_with_data_attr(self) -> None:
+        svg = '<svg xmlns="http://www.w3.org/2000/svg"><circle data-tooltip="info" /></svg>'
+        result = optimize_svg(svg, passes=["remove_empty_elements"])
+        assert 'data-tooltip="info"' in result.svg
+
+    def test_preserves_element_with_role_and_event(self) -> None:
+        svg = '<svg xmlns="http://www.w3.org/2000/svg"><g role="button" tabindex="0" onclick="submit()" /></svg>'
+        result = optimize_svg(svg, passes=["remove_empty_elements"])
+        assert 'role="button"' in result.svg
+        assert 'tabindex="0"' in result.svg
+        assert "onclick" in result.svg
+
+    def test_preserves_zero_dim_with_data_attr(self) -> None:
+        svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="0" height="0" data-target="zone" /></svg>'
+        result = optimize_svg(svg, passes=["remove_empty_elements"])
+        assert 'data-target="zone"' in result.svg
+
+    def test_preserves_element_with_aria_label(self) -> None:
+        svg = '<svg xmlns="http://www.w3.org/2000/svg"><g aria-label="description" /></svg>'
+        result = optimize_svg(svg, passes=["remove_empty_elements"])
+        assert 'aria-label="description"' in result.svg
+
+    def test_preserves_element_with_style(self) -> None:
+        svg = '<svg xmlns="http://www.w3.org/2000/svg"><polygon style="display:none" /></svg>'
+        result = optimize_svg(svg, passes=["remove_empty_elements"])
+        assert 'style="display:none"' in result.svg
+
+    def test_strips_truly_bare_elements(self) -> None:
+        svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect /><g></g><circle></circle></svg>'
+        result = optimize_svg(svg, passes=["remove_empty_elements"])
+        assert "<rect" not in result.svg
+        assert "<g>" not in result.svg
+        assert "<circle" not in result.svg
+
 
 class TestNormalizeTransforms:
     def test_normalizes_spacing(self) -> None:

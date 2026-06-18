@@ -82,6 +82,8 @@ class TestRenderResult:
             "warnings",
             "cache_hit",
             "source_hash",
+            "success",
+            "error",
         ]
 
     def test_mutable_warnings(self) -> None:

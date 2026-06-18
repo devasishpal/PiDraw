@@ -80,8 +80,8 @@ class TestRendererRender:
 
     def test_render_unknown_language(self) -> None:
         r = Renderer()
-        with pytest.raises(Exception):
-            r.render("some random text")
+        result = r.render("some random text")
+        assert not result.success
 
 
 class TestRendererAvailableEngines:

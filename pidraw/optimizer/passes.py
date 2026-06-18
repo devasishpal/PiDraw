@@ -100,7 +100,6 @@ def remove_editor_metadata(svg: str) -> str:
 # ---------------------------------------------------------------------------
 
 _URL_REF_RE = re.compile(r"url\(#([^)]+)\)")
-_HREF_REF_RE = re.compile(r'(?:href|xlink:href)\s*=\s*"#([^"]+)"')
 _CSS_ID_REF_RE = re.compile(r"#([a-zA-Z_][\w.-]*)")
 
 
@@ -109,11 +108,11 @@ def _collect_referenced_ids(root: Element) -> set[str]:
     refs: set[str] = set()
 
     for elem in _iter_all(root):
-        for value in elem.attrib.values():
+        for key, value in elem.attrib.items():
             for m in _URL_REF_RE.finditer(value):
                 refs.add(m.group(1))
-            for m in _HREF_REF_RE.finditer(value):
-                refs.add(m.group(1))
+            if _local_name(key) == "href" and value.startswith("#"):
+                refs.add(value[1:])
 
         if _local_name(elem.tag) == "style" and elem.text:
             text = elem.text
@@ -291,6 +290,21 @@ _SIGNIFICANT_ATTRS = frozenset(
     }
 )
 
+_ALWAYS_PRESERVED_ATTRS = frozenset({
+    "class", "style", "role", "tabindex",
+})
+
+_EVENT_HANDLER_ATTRS = frozenset({
+    "onclick", "ondblclick", "onmousedown", "onmouseup",
+    "onmouseover", "onmouseout", "onmousemove",
+    "onfocus", "onblur", "onchange", "onsubmit",
+    "onkeydown", "onkeyup", "onkeypress",
+    "onload", "onerror", "onresize", "onscroll",
+    "onpointerdown", "onpointerup", "onpointermove",
+    "onpointerenter", "onpointerleave",
+    "ontouchstart", "ontouchend", "ontouchmove",
+})
+
 
 def _is_visually_empty(elem: Element) -> bool:
     """Return ``True`` if *elem* has no visual impact on the rendering."""
@@ -300,15 +314,25 @@ def _is_visually_empty(elem: Element) -> bool:
         return False
     if (elem.text or "").strip():
         return False
+
+    has_preserved_attr = False
     for key in elem.attrib:
         local = _local_name(key)
         if local in _SIGNIFICANT_ATTRS:
             val = elem.attrib[key].strip()
             if val not in ("0", "none", ""):
                 return False
+            has_preserved_attr = True
+        if local in _ALWAYS_PRESERVED_ATTRS:
+            return False
+        if local in _EVENT_HANDLER_ATTRS:
+            return False
         if local == "id":
             return False
-    return True
+        if local.startswith("data-") or local.startswith("aria-"):
+            return False
+
+    return not has_preserved_attr
 
 
 def _remove_empty_recursive(parent: Element) -> bool:

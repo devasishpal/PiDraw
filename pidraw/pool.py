@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from typing import Iterable
 
 from pidraw.cache import CacheManager
-from pidraw.exceptions import PiDrawError
 
 
 @dataclass
@@ -220,7 +219,7 @@ def _render_wrapper(
     start = time.perf_counter()
     try:
         result = _render_single(source, language=language, format="svg")
-        svg = result.svg
+        svg = result.svg if result.success else ""
         elapsed = (time.perf_counter() - start) * 1000
         return PoolRenderResult(
             svg=svg,
@@ -228,8 +227,9 @@ def _render_wrapper(
             elapsed_ms=elapsed,
             language=language,
             file_path=file_path,
+            error=result.error,
         )
-    except PiDrawError as exc:
+    except Exception as exc:
         elapsed = (time.perf_counter() - start) * 1000
         return PoolRenderResult(
             svg="",

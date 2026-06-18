@@ -12,10 +12,6 @@ import warnings
 from typing import Iterable
 
 from pidraw.detector import detect
-from pidraw.exceptions import (
-    LanguageNotSupportedError,
-    UnsupportedLanguageError,
-)
 from pidraw.registry import get_renderer
 from pidraw.result import RenderResult
 
@@ -40,6 +36,8 @@ def render(
     This is the primary entry point for the PiDraw library.  When
     *language* is ``None`` the diagram language is auto-detected;
     otherwise the specified language is used directly.
+
+    Never raises — errors are returned as ``RenderResult(success=False, error=...)``.
 
     Parameters
     ----------
@@ -70,55 +68,66 @@ def render(
     Returns
     -------
     RenderResult
-        The rendered output container with `.svg` and optionally `.png`.
-
-    Raises
-    ------
-    LanguageNotSupportedError
-        If the language cannot be detected or is not supported.
-    RendererNotFoundError
-        If the detected/explicit language has no registered renderer.
-    RenderError
-        If the rendering process itself fails.
+        The rendered output container with ``.success`` and ``.svg`` / ``.png``.
     """
     start = time.perf_counter()
-    fmt = format.lower()
-    if fmt not in _RECOGNISED_FORMATS:
-        raise ValueError(f"Unsupported format: {format!r}. Use 'svg' or 'png'.")
+    result: RenderResult
+    try:
+        fmt = format.lower()
+        if fmt not in _RECOGNISED_FORMATS:
+            result = RenderResult(
+                svg="",
+                success=False,
+                error=f"Unsupported format: {format!r}. Use 'svg' or 'png'.",
+            )
+            return result
 
-    if language:
-        lang = language.lower()
-    else:
-        lang = detect(source)
+        if language:
+            lang = language.lower()
+        else:
+            lang = detect(source)
 
-    if lang == "unknown":
-        raise UnsupportedLanguageError("Unable to detect diagram language from source")
+        if lang == "unknown":
+            result = RenderResult(
+                svg="",
+                success=False,
+                error="Unable to detect diagram language from source",
+            )
+            return result
 
-    renderer = get_renderer(lang)
-    svg = renderer.render(source)
+        renderer = get_renderer(lang)
+        svg = renderer.render(source)
 
-    if optimize:
-        svg = _apply_optimization(svg, optimize)
+        if optimize:
+            svg = _apply_optimization(svg, optimize)
 
-    if quality:
-        from pidraw.quality import QualityProcessor
+        if quality:
+            from pidraw.quality import QualityProcessor
+            svg = QualityProcessor().process(svg)
 
-        svg = QualityProcessor().process(svg)
+        # Build the result
+        elapsed = (time.perf_counter() - start) * 1000.0
+        result = RenderResult(
+            svg=svg,
+            language=lang,
+            engine_used=renderer.name if hasattr(renderer, "name") else "",
+            render_time_ms=elapsed,
+        )
 
-    # Build the result
-    elapsed = (time.perf_counter() - start) * 1000.0
-    result = RenderResult(
-        svg=svg,
-        language=lang,
-        engine_used=renderer.name if hasattr(renderer, "name") else "",
-        render_time_ms=elapsed,
-    )
+        if fmt == "png":
+            from pidraw.backend.png import svg_to_png
+            png_bytes = svg_to_png(svg, scale=scale, transparent=transparent)
+            result.png = png_bytes
 
-    if fmt == "png":
-        from pidraw.backend.png import svg_to_png
-
-        png_bytes = svg_to_png(svg, scale=scale, transparent=transparent)
-        result.png = png_bytes
+    except Exception as exc:
+        elapsed = (time.perf_counter() - start) * 1000.0
+        result = RenderResult(
+            svg="",
+            language=language or "",
+            render_time_ms=elapsed,
+            success=False,
+            error=str(exc),
+        )
 
     return result
 
@@ -238,6 +247,8 @@ def render_many(
 ) -> list[RenderResult]:
     """Render multiple diagram sources in parallel.
 
+    Never raises — per-item errors are returned as ``RenderResult(success=False, error=...)``.
+
     Parameters
     ----------
     sources :
@@ -262,34 +273,38 @@ def render_many(
     Returns
     -------
     list[RenderResult]
-        Rendered outputs, one per input in the same order.
+        One result per input, in the same order. Check ``.success`` on each.
     """
     from pidraw.pool import RenderPool
 
     pool = RenderPool(max_workers=max_workers)
-    results = pool.render_many(sources, language=language, show_progress=False)
+    pool_results = pool.render_many(sources, language=language, show_progress=False)
 
     outputs: list[RenderResult] = []
-    for r in results:
+    for r in pool_results:
         if r.error:
-            raise LanguageNotSupportedError(str(r.error))
+            outputs.append(RenderResult(
+                svg="",
+                language=language or "",
+                success=False,
+                error=r.error,
+            ))
+            continue
+
         svg = r.svg
         if optimize:
             svg = _apply_optimization(svg, optimize)
         if quality:
             from pidraw.quality import QualityProcessor
-
             svg = QualityProcessor().process(svg)
 
-        elapsed = 0.0
         result = RenderResult(
             svg=svg,
             language=language or "",
-            render_time_ms=elapsed,
+            render_time_ms=r.elapsed_ms,
         )
         if format == "png":
             from pidraw.backend.png import svg_to_png
-
             result.png = svg_to_png(svg, scale=scale, transparent=transparent)
         outputs.append(result)
     return outputs

@@ -38,6 +38,8 @@ class RenderResult:
     warnings: list[str] = field(default_factory=list)
     cache_hit: bool = False
     source_hash: str = ""
+    success: bool = True
+    error: str | None = None
 
     def __len__(self) -> int:
         return len(self.svg)

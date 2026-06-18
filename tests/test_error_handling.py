@@ -106,26 +106,26 @@ class TestErrorHierarchy:
 
 class TestRenderErrors:
     def test_unsupported_language(self) -> None:
-        with pytest.raises(UnsupportedLanguageError):
-            render("some gibberish text")
+        result = render("some gibberish text")
+        assert not result.success
 
     def test_renderer_not_found(self) -> None:
-        with pytest.raises(RendererNotFoundError):
-            render("graph TD\n    A-->B")
+        result = render("graph TD\n    A-->B")
+        assert not result.success
 
     def test_rendering_error_propagated(self) -> None:
         register_renderer("mermaid", FailingRenderer())
-        with pytest.raises(RenderingError, match="render failed"):
-            render("graph TD\n    A-->B")
+        result = render("graph TD\n    A-->B")
+        assert not result.success
 
     def test_no_renderer_for_detected_language(self) -> None:
-        with pytest.raises(RendererNotFoundError):
-            render("graph LR\n    A-->B")
+        result = render("graph LR\n    A-->B")
+        assert not result.success
 
     def test_empty_source(self) -> None:
-        with pytest.raises(UnsupportedLanguageError):
-            render("")
+        result = render("")
+        assert not result.success
 
     def test_whitespace_source(self) -> None:
-        with pytest.raises(UnsupportedLanguageError):
-            render("   \n  ")
+        result = render("   \n  ")
+        assert not result.success

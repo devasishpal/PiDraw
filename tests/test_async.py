@@ -46,8 +46,8 @@ def test_arender_with_language() -> None:
 
 
 def test_arender_unknown_language() -> None:
-    with pytest.raises(Exception):
-        _run(arender("some random text"))
+    result = _run(arender("some random text"))
+    assert not result.success
 
 
 def test_arender_file(tmp_path: Any) -> None:

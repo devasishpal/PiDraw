@@ -186,12 +186,11 @@ def render_cmd(
 
     spinner = Spinner("Rendering")
     spinner.start()
-    try:
-        result = render(source, language=language, format=fmt)
-    except PiDrawError as exc:
+    result = render(source, language=language, format=fmt)
+    if not result.success:
         spinner.stop()
-        logger.error("Render failed: %s", exc)
-        raise SystemExit(1) from exc
+        logger.error("Render failed: %s", result.error or "Unknown error")
+        raise SystemExit(1)
 
     spinner.stop()
 
@@ -376,13 +375,25 @@ def _process_single(args: tuple[str, str | None, bool, str | None]) -> BatchResu
             )
 
         result = render(source, language=use_lang)
-        orig_size = len(result.encode("utf-8") if isinstance(result, str) else result)
+        if not result.success:
+            elapsed = (time.perf_counter() - start) * 1000
+            return BatchResult(
+                file=file,
+                status="failed",
+                message=result.error or "Render failed",
+                elapsed_ms=elapsed,
+                language=use_lang,
+            )
 
-        if do_optimize and isinstance(result, str):
-            opt = optimize_svg(result)
-            result = opt.svg
+        orig_size = len(result.svg)
+        svg = result.svg
+
+        if do_optimize and svg:
+            opt = optimize_svg(svg)
+            svg = opt.svg
             orig_size = opt.original_size
             opt_size = opt.optimized_size
+            result.svg = svg
 
         if output_dir:
             out_path = output_dir / f"{basename}.svg"
