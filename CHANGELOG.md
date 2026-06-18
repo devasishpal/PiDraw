@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.3.2 (2026-06-18)
+
+### Added
+- **BlockDiag family renderers** (`engines/blockdiag.py`) — native support for blockdiag, seqdiag, actdiag, and nwdiag diagram types via optional Python packages.
+- **Equation rendering** (`equations/`) — render LaTeX math to SVG/PNG using matplotlib's mathtext (no LaTeX installation required), with HTML+CSS fallback.
+- **Pillow fallback PNG backend** — SVG-to-PNG conversion via Pillow when cairosvg and playwright are unavailable.
+- **svglib fallback PNG backend** — additional SVG-to-PNG conversion via svglib + reportlab.
+- **`html_to_png()` function** — render arbitrary HTML pages to PNG via Playwright.
+
+### Changed
+- **Mermaid engine** — improved empty-SVG detection, fallback to native converter for all diagram types, placeholder SVG when both native and mmdc fail.
+- **PNG backend detection** — reordered priority: cairosvg → playwright → Pillow → svglib. Added proper module cache clearing for cairosvg.
+- **Dependencies** — `cairosvg` moved from hard dependency to optional `[png]` extra; `Pillow` added as hard dependency.
+
+### Fixed
+- **Mermaid converter** — fixed node pattern group ordering to correctly distinguish `((circle))` vs `(stadium)`, and entity relationship parsing for `Entity1--label--Entity2` syntax.
+- **Mermaid arrow styles** — fixed edge style detection for BOLD (`==`), DOTTED (`-.`), DASHED (`--`) arrows. Fixed arrow end detection for `x` (BOX) and `o` (CIRCLE) endings.
+- **Mermaid layer ordering** — reversed computed layers so earlier layers render at the back.
+
 ## 1.3.0 (2026-06-10)
 
 ### Added

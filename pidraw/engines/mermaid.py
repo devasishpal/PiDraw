@@ -16,7 +16,22 @@ _MAX_INPUT_SIZE = 100 * 1024
 _RENDER_TIMEOUT = 30
 _SVG_ROOT_RE = re.compile(r"<\s*svg[\s>]", re.IGNORECASE)
 
-_EMPTY_SVG_RE = re.compile(r"<g\s+id\s*=\s*[\"']nodes[\"']\s*/?\s*>", re.IGNORECASE)
+_EMPTY_SVG_RE = re.compile(r"<g\s+id\s*=\s*[\"']nodes[\"']\s*/>", re.IGNORECASE)
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _truncate_source(source: str, max_len: int = 120) -> str:
+    """Truncate source for display in placeholder SVG, removing tags."""
+    s = _TAG_RE.sub("", source).strip()
+    if len(s) <= max_len:
+        return s
+    return s[: max_len - 3] + "..."
+
+
+def _sanitize_xml(text: str) -> str:
+    """Minimal XML-escaping for SVG text content."""
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 # Diagram types natively supported by the converter
 _NATIVE_DIAGRAM_TYPES = {
@@ -48,7 +63,7 @@ _DIAGRAM_TYPE_RE = re.compile(
     r"^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram"
     r"|stateDiagram-v2|erDiagram|pie|gantt|journey|timeline|mindmap"
     r"|gitgraph|quadrantChart|xychart|zenuml|sankey|requirementDiagram)\b",
-    re.MULTILINE,
+    re.MULTILINE | re.IGNORECASE,
 )
 
 
@@ -71,42 +86,50 @@ class MermaidRenderer(BaseRenderer):
 
         type_match = _DIAGRAM_TYPE_RE.search(source)
         diagram_type = type_match.group(1) if type_match else ""
-        dt_lower = diagram_type.lower()
 
-        # If type requires CLI and we don't have it, error
-        if not self._has_mmdc and dt_lower in _CLI_ONLY_DIAGRAM_TYPES:
-            raise RenderError(
-                "mermaid",
-                f"Diagram type {diagram_type!r} requires mmdc CLI. "
-                "Install with: npm install -g @mermaid-js/mermaid-cli",
-            )
+        # Always try native first (no deps, fast) for ALL types
+        svg = self._try_native_safe(source)
 
-        # Types not in NATIVE and not in CLI_ONLY — unknown
-        if dt_lower not in _NATIVE_DIAGRAM_TYPES and dt_lower not in _CLI_ONLY_DIAGRAM_TYPES:
+        # Check if native output is empty or invalid
+        if svg is None or self._is_empty_svg(svg):
+            # Fall back to mmdc if available
             if self._has_mmdc:
-                svg = self._run_mmdc(source)
-                self._validate_output(svg)
-                return svg
-            raise RenderError(
-                "mermaid",
-                f"Unknown diagram type {diagram_type!r}. "
-                "Neither native renderer nor mmdc CLI can handle it.",
+                try:
+                    mmdc_svg = self._run_mmdc(source)
+                    self._validate_output(mmdc_svg)
+                    svg = mmdc_svg
+                except (RenderError, RenderTimeoutError):
+                    pass  # keep native svg (even if empty/valid-but-degenerate)
+            else:
+                svg = None
+
+        # If we still have nothing, produce a placeholder SVG
+        if svg is None:
+            label = _sanitize_xml(_truncate_source(source, 120))
+            type_label = _sanitize_xml(diagram_type or "mermaid")
+            svg = (
+                f'<svg xmlns="http://www.w3.org/2000/svg"'
+                f' width="400" height="120" viewBox="0 0 400 120">'
+                f'<rect width="100%" height="100%" fill="#f8f9fa" rx="8"/>'
+                f'<text x="200" y="40" text-anchor="middle"'
+                f' font-family="sans-serif" font-size="14" fill="#555">'
+                f'[Mermaid: {type_label}]</text>'
+                f'<text x="200" y="65" text-anchor="middle"'
+                f' font-family="monospace" font-size="11" fill="#888">'
+                f'{label}</text>'
+                f'</svg>'
             )
-
-        # Always try native first (no deps, fast)
-        svg = self._run_native(source)
-        self._validate_output(svg)
-
-        # Check if native output is substantively empty
-        if self._is_empty_svg(svg) and self._has_mmdc:
-            try:
-                mmdc_svg = self._run_mmdc(source)
-                self._validate_output(mmdc_svg)
-                svg = mmdc_svg
-            except (RenderError, RenderTimeoutError):
-                pass
 
         return svg
+
+    def _try_native_safe(self, source: str) -> str | None:
+        """Run native converter, returning None on any failure."""
+        try:
+            svg = self._run_native(source)
+            self._validate_output(svg)
+            return svg
+        except (RenderError, RenderTimeoutError):
+            return None
 
     @staticmethod
     def _is_empty_svg(svg: str) -> bool:

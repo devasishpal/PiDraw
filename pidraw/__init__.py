@@ -51,10 +51,17 @@ from pidraw.core.models import (
 from pidraw.detector import detect, detect_language
 from pidraw.diagnostics import analyze
 from pidraw.engines.base import BaseRenderer
+from pidraw.engines.blockdiag import (
+    ActDiagRenderer,
+    BlockDiagRenderer,
+    NwDiagRenderer,
+    SeqDiagRenderer,
+)
 from pidraw.engines.d2 import D2Renderer
 from pidraw.engines.graphviz import GraphvizRenderer
 from pidraw.engines.mermaid import MermaidRenderer
 from pidraw.engines.plantuml import PlantUMLRenderer
+from pidraw.equations import EquationResult, render_equation, render_equation_svg
 from pidraw.exceptions import (
     EngineNotAvailableError,
     LanguageNotSupportedError,
@@ -100,6 +107,9 @@ from pidraw.typography import FontSpec, estimate_text_size
 
 __all__ = [
     "render",
+    "render_equation",
+    "render_equation_svg",
+    "EquationResult",
     "render_file",
     "render_many",
     "render_large_file",
@@ -121,6 +131,10 @@ __all__ = [
     "MermaidRenderer",
     "GraphvizRenderer",
     "PlantUMLRenderer",
+    "BlockDiagRenderer",
+    "SeqDiagRenderer",
+    "ActDiagRenderer",
+    "NwDiagRenderer",
     "D2Renderer",
     "DiagramLanguage",
     "DetectionResult",

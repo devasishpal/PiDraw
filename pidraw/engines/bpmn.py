@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 from typing import Any, Optional
 
 try:
-    import drawsvg as _dw
+    import drawsvg as _dw  # type: ignore[import-untyped]
 
     _HAS_DRAWSVG = True
 except ImportError:

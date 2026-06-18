@@ -2,6 +2,12 @@
 
 from pidraw.core.converters import get_converter
 from pidraw.engines.base import BaseRenderer
+from pidraw.engines.blockdiag import (
+    ActDiagRenderer,
+    BlockDiagRenderer,
+    NwDiagRenderer,
+    SeqDiagRenderer,
+)
 from pidraw.engines.bpmn import BPMNRenderer
 from pidraw.engines.d2 import D2Renderer
 from pidraw.engines.excalidraw import ExcalidrawRenderer
@@ -32,6 +38,10 @@ _REGISTRATIONS: list[tuple[str, type[BaseRenderer], tuple[object, ...]]] = [
     ("plantuml", PlantUMLRenderer, ()),
     ("d2", D2Renderer, ()),
     ("bpmn", BPMNRenderer, ()),
+    ("blockdiag", BlockDiagRenderer, ()),
+    ("seqdiag", SeqDiagRenderer, ()),
+    ("actdiag", ActDiagRenderer, ()),
+    ("nwdiag", NwDiagRenderer, ()),
     ("markmap", NativeRenderer, ("markmap",)),
     ("nomnoml", NativeRenderer, ("nomnoml",)),
     ("wavedrom", WaveDromRenderer, ()),

@@ -22,14 +22,14 @@ from pidraw.core.models import (
 )
 
 _NODE_PATTERN = re.compile(
-    r"(\w[\w\d_]*)"  # id
-    r"(?:\[([^\]]*)\])?"  # [label] rectangle
-    r"(?:\{([^}]*)\})?"  # {label} rhombus
-    r"(?:\(([^)]*)\))?"  # (label) rounded rect
-    r"(?:\"([^\"]*)\")?"  # "label"
-    r"(?:\<\[([^\]]*)\]\>)?"  # <[label]> hexagon
-    r"(?:\(\(([^)]*)\)\))?"  # ((label)) circle
-    r"(?:\>([^>]*)\]?)?"  # >label] async
+    r"(\w[\w\d_]*)"  # 1: id
+    r"(?:\[([^\]]*)\])?"  # 2: [label] rectangle
+    r"(?:\{([^}]*)\})?"  # 3: {label} rhombus
+    r"(?:\(\(([^)]*)\)\))?"  # 4: ((label)) circle
+    r"(?:\(([^)]*)\))?"  # 5: (label) rounded rect
+    r"(?:\"([^\"]*)\")?"  # 6: "label"
+    r"(?:\<\[([^\]]*)\]\>)?"  # 7: <[label]> hexagon
+    r"(?:\>([^>]*)\]?)?"  # 8: >label] async
 )
 
 _EDGE_PATTERN = re.compile(
@@ -186,20 +186,20 @@ class MermaidConverter(DiagramConverter):
                 elif node_match.group(3) is not None:
                     label_text = node_match.group(3)
                     shape_type = ShapeType.DIAMOND
-                elif node_match.group(7) is not None:
-                    label_text = node_match.group(7)
-                    shape_type = ShapeType.DOUBLE_CIRCLE
                 elif node_match.group(4) is not None:
                     label_text = node_match.group(4)
+                    shape_type = ShapeType.DOUBLE_CIRCLE
+                elif node_match.group(5) is not None:
+                    label_text = node_match.group(5)
                     shape_type = ShapeType.STADIUM
-                elif node_match.group(6) is not None:
-                    label_text = node_match.group(6)
+                elif node_match.group(7) is not None:
+                    label_text = node_match.group(7)
                     shape_type = ShapeType.HEXAGON
                 elif node_match.group(8) is not None:
                     label_text = node_match.group(8)
                     shape_type = ShapeType.PARALLELOGRAM
-                elif node_match.group(5) is not None:
-                    label_text = node_match.group(5)
+                elif node_match.group(6) is not None:
+                    label_text = node_match.group(6)
 
                 if nid not in diagram.nodes:
                     from pidraw.core.shapes import compute_shape_size
@@ -547,14 +547,8 @@ class MermaidConverter(DiagramConverter):
                 src = em2.group(1)
                 label_text = em2.group(5) or ""
 
-                # Simple heuristic for the target — the last word in the line before ":"
-                tgt_match = re.match(
-                    r"(\w[\w\d_]*)\s*[|o\-.<>{}]+\s*\w*\s*:\s*.+",
-                    line,
-                )
-                tgt = ""
-                if tgt_match:
-                    tgt = tgt_match.group(1)
+                # Target entity is captured by group 4 (or 3 if quoted) in the regex
+                tgt = em2.group(4) or em2.group(3) or ""
 
                 for eid in (src, tgt):
                     if eid and eid not in diagram.nodes:
@@ -750,9 +744,9 @@ class MermaidConverter(DiagramConverter):
 
         if "==" in arrow_str:
             edge_style = EdgeStyle.BOLD
-        elif "-.->" in arrow_str or "-.." in arrow_str:
+        elif "-." in arrow_str:
             edge_style = EdgeStyle.DOTTED
-        elif "-.-" in arrow_str:
+        elif "--" in arrow_str:
             edge_style = EdgeStyle.DASHED
 
         if arrow_str.startswith("<->") or arrow_str.startswith("<==>"):
@@ -760,12 +754,11 @@ class MermaidConverter(DiagramConverter):
             arrow_end = ArrowStyle.TRIANGLE_FILLED
         elif arrow_str.startswith("<-"):
             arrow_start = ArrowStyle.TRIANGLE_FILLED
-        elif arrow_str.endswith("-->"):
-            arrow_end = ArrowStyle.OPEN
-        elif arrow_str.endswith("o--"):
-            arrow_end = ArrowStyle.CIRCLE
-        elif arrow_str.endswith("x--"):
+
+        if arrow_str.endswith("x") or arrow_str.endswith("x--"):
             arrow_end = ArrowStyle.BOX
+        elif arrow_str.endswith("o") or arrow_str.endswith("o--"):
+            arrow_end = ArrowStyle.CIRCLE
 
         return edge_style, arrow_start, arrow_end
 
@@ -815,6 +808,8 @@ class MermaidConverter(DiagramConverter):
             layers.append(layer)
             assigned.update(layer)
             remaining -= set(layer)
+
+        layers.reverse()
 
         for layer_idx, layer_nodes in enumerate(layers):
             for col_idx, nid in enumerate(layer_nodes):
