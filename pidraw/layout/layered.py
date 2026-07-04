@@ -19,10 +19,25 @@ class LayeredLayout(LayoutEngine):
 
         layers = self._assign_layers(diagram)
         is_horizontal = direction in ("LR", "RL")
-        max_dim_per_layer: list[float] = []
 
-        for layer_idx, layer_ids in enumerate(layers):
+        # Pre-compute max dimension for each layer
+        layer_max_dims: list[float] = []
+        for layer_ids in layers:
             max_dim = 0.0
+            for nid in layer_ids:
+                node = diagram.get_node(nid)
+                if node is None:
+                    continue
+                nw = node.size.width if node.size else 120
+                nh = node.size.height if node.size else 50
+                dim = nw if is_horizontal else nh
+                max_dim = max(max_dim, dim)
+            layer_max_dims.append(max_dim)
+
+        # Accumulate offsets from previous layers
+        accumulated = 0.0
+        for layer_idx, layer_ids in enumerate(layers):
+            offset = accumulated + padding
             x, y = padding, padding
             for nid in layer_ids:
                 node = diagram.get_node(nid)
@@ -30,23 +45,24 @@ class LayeredLayout(LayoutEngine):
                     continue
                 nw = node.size.width if node.size else 120
                 nh = node.size.height if node.size else 50
-                dim = nh if is_horizontal else nw
-                max_dim = max(max_dim, dim)
 
                 if is_horizontal:
                     node.position = Position(
-                        y=layer_idx * (max_dim + gap_y) + padding,
-                        x=x,
-                    )
-                    x += (node.size.width if node.size else 120) + gap_x
-                else:
-                    node.position = Position(
-                        x=layer_idx * (max_dim + gap_x) + padding,
+                        x=offset,
                         y=y,
                     )
-                    y += (node.size.height if node.size else 50) + gap_y
+                    y += nh + gap_y
+                else:
+                    node.position = Position(
+                        x=x,
+                        y=offset,
+                    )
+                    x += nw + gap_x
 
-            max_dim_per_layer.append(max_dim)
+            if is_horizontal:
+                accumulated += layer_max_dims[layer_idx] + gap_x
+            else:
+                accumulated += layer_max_dims[layer_idx] + gap_y
 
         for n in nodes:
             if n.position is None:

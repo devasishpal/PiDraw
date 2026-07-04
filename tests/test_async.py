@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any, Generator
-from unittest.mock import patch
 
 import pytest
 
@@ -28,21 +27,21 @@ def test_arender_basic() -> None:
     r = MermaidRenderer(mmdc_path="/fake/mmdc")
     register_renderer("mermaid", r)
 
-    fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-    with patch.object(r, "_run_mmdc", return_value=fake_svg):
-        result = _run(arender("graph TD; A-->B;"))
-        assert result.svg == fake_svg
-        assert result.language == "mermaid"
+    result = _run(arender("graph TD; A-->B;"))
+    assert "<svg" in result.svg
+    assert "A" in result.svg
+    assert "B" in result.svg
+    assert result.language == "mermaid"
 
 
 def test_arender_with_language() -> None:
     r = MermaidRenderer(mmdc_path="/fake/mmdc")
     register_renderer("mermaid", r)
 
-    fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-    with patch.object(r, "_run_mmdc", return_value=fake_svg):
-        result = _run(arender("graph TD; A-->B;", language="mermaid"))
-        assert result.svg == fake_svg
+    result = _run(arender("graph TD; A-->B;", language="mermaid"))
+    assert "<svg" in result.svg
+    assert "A" in result.svg
+    assert "B" in result.svg
 
 
 def test_arender_unknown_language() -> None:
@@ -59,10 +58,10 @@ def test_arender_file(tmp_path: Any) -> None:
     f = d / "diagram.mmd"
     f.write_text("graph TD; A-->B;", encoding="utf-8")
 
-    fake_svg = "<svg xmlns='http://www.w3.org/2000/svg'></svg>"
-    with patch.object(r, "_run_mmdc", return_value=fake_svg):
-        result = _run(arender_file(str(f)))
-        assert result.svg == fake_svg
+    result = _run(arender_file(str(f)))
+    assert "<svg" in result.svg
+    assert "A" in result.svg
+    assert "B" in result.svg
 
 
 def test_arender_file_not_found() -> None:

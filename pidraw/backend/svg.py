@@ -27,6 +27,7 @@ class SvgBackend:
     def __init__(self, theme: Optional[dict] = None) -> None:
         self._theme = theme or {}
         self._marker_ids: set[str] = set()
+        self._defs: Element | None = None
 
     def render(self, diagram: Diagram) -> str:
         vp = diagram.viewport
@@ -46,9 +47,9 @@ class SvgBackend:
             },
         )
 
-        defs = SubElement(root, "defs")
-        self._add_markers(defs, diagram)
-        self._add_filters(defs)
+        self._defs = SubElement(root, "defs")
+        self._add_markers(self._defs, diagram)
+        self._add_filters(self._defs)
 
         bg = self._theme.get("background")
         if bg is not None:
@@ -145,6 +146,15 @@ class SvgBackend:
 
         g = SubElement(parent, "g", {"id": f"node-{node.id}", "class": "node"})
 
+        # Clip path to prevent text overflow
+        clip_id = f"clip-{node.id}"
+        clip_def = SubElement(self._defs, "clipPath", {"id": clip_id})
+        SubElement(
+            clip_def,
+            "rect",
+            {"x": str(x), "y": str(y), "width": str(w), "height": str(h)},
+        )
+
         path_data = compute_shape_path(shape_type, pos, size, style.corner_radius)
 
         attrs: dict[str, str] = {
@@ -160,17 +170,36 @@ class SvgBackend:
         elif style.stroke_style == EdgeStyle.DOTTED:
             attrs["stroke-dasharray"] = f"{style.stroke_width},{style.stroke_width * 3}"
 
-        SubElement(g, "path", attrs)
+        shape_path = SubElement(g, "path", attrs)
 
         if style.shadow:
-            attrs["filter"] = "url(#pidraw-shadow)"
+            shape_path.set("filter", "url(#pidraw-shadow)")
 
         if node.label is not None and node.label.text:
-            self._render_label(g, node.label, x + w / 2, y + h / 2, style)
+            label_g = SubElement(g, "g", {"clip-path": f"url(#{clip_id})"})
+            self._render_label(label_g, node.label, x + w / 2, y + h / 2, style)
 
         if node.children:
             for child in node.children:
                 self._render_node(g, child, diagram)
+
+    @staticmethod
+    def _rect_boundary_point(
+        cx: float, cy: float, rx: float, ry: float, rw: float, rh: float
+    ) -> tuple[float, float]:
+        dx = cx - rx
+        dy = cy - ry
+        hw = rw / 2.0
+        hh = rh / 2.0
+        if dx == 0 and dy == 0:
+            return (rx + hw, ry + hh)
+        adx = abs(dx)
+        ady = abs(dy)
+        if adx * hh > ady * hw:
+            t = hw / adx
+        else:
+            t = hh / ady
+        return (rx + hw + dx * t, ry + hh + dy * t)
 
     def _render_edge(self, parent: Element, edge: Edge, diagram: Diagram) -> None:
         src_node = diagram.get_node(edge.source)
@@ -186,10 +215,15 @@ class SvgBackend:
 
         style = Style.merge(diagram.style, edge.style)
 
-        x1 = src_pos.x + src_size.width / 2
-        y1 = src_pos.y + src_size.height / 2
-        x2 = tgt_pos.x + tgt_size.width / 2
-        y2 = tgt_pos.y + tgt_size.height / 2
+        sx, sy = src_pos.x + src_size.width / 2, src_pos.y + src_size.height / 2
+        tx, ty = tgt_pos.x + tgt_size.width / 2, tgt_pos.y + tgt_size.height / 2
+
+        x1, y1 = self._rect_boundary_point(
+            tx, ty, src_pos.x, src_pos.y, src_size.width, src_size.height
+        )
+        x2, y2 = self._rect_boundary_point(
+            sx, sy, tgt_pos.x, tgt_pos.y, tgt_size.width, tgt_size.height
+        )
 
         edge_id = f"edge-{edge.id}" if edge.id else ""
         g = SubElement(parent, "g", {"id": edge_id, "class": "edge"})
@@ -231,7 +265,14 @@ class SvgBackend:
         SubElement(g, "path", path_attrs)
 
         if edge.label is not None and edge.label.text:
-            mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+            if edge.waypoints:
+                # Position label at center of waypoints (typically the horizontal segment)
+                xs = [wp.x for wp in edge.waypoints]
+                ys = [wp.y for wp in edge.waypoints]
+                mx = (min(xs) + max(xs)) / 2
+                my = (min(ys) + max(ys)) / 2
+            else:
+                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
             self._render_label(g, edge.label, mx, my - 8, style)
 
     def _render_label(

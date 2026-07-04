@@ -19,22 +19,33 @@ class GridLayout(LayoutEngine):
             return diagram
 
         cols = max(1, int(math.ceil(math.sqrt(len(nodes)))))
-        x, y = padding, padding
+
+        # Pre-compute max width per column across all rows
+        col_max_width: list[float] = [0.0] * cols
+        for i, node in enumerate(nodes):
+            col = i % cols
+            node_width = node.size.width if node.size else 120
+            col_max_width[col] = max(col_max_width[col], node_width)
+
+        # Position nodes using column-aligned widths
+        y = padding
         max_row_height = 0.0
 
         for i, node in enumerate(nodes):
-            node_width = node.size.width if node.size else 120
+            col = i % cols
             node_height = node.size.height if node.size else 50
 
-            node.position = Position(x, y)
+            # Compute aligned X based on column max widths
+            col_x = padding
+            for c in range(col):
+                col_x += col_max_width[c] + gap_x
+
+            node.position = Position(col_x, y)
             max_row_height = max(max_row_height, node_height)
 
-            if (i + 1) % cols == 0:
-                x = padding
+            if col == cols - 1:
                 y += max_row_height + gap_y
                 max_row_height = 0.0
-            else:
-                x += node_width + gap_x
 
         # Always recompute viewport from actual positions
         min_x = min((n.position.x for n in nodes if n.position), default=0)

@@ -14,11 +14,13 @@ from pidraw.core.models import (
     Layout,
     LayoutType,
     Node,
+    Point,
     Position,
     Shape,
     ShapeType,
     Size,
     Style,
+    Viewport,
 )
 
 _NODE_PATTERN = re.compile(
@@ -43,7 +45,7 @@ _EDGE_PATTERN = re.compile(
     r"(?:\[[^\]]*\]|\([^)]*\)|\{[^}]*\}|\(\([^)]*\)\)|<\[[^\]]*\]>)?"  # optional node shape
 )
 
-_DIRECTION_PATTERN = re.compile(r"(?:^|\n)\s*(graph|flowchart)\s+(TB|BT|LR|RL)", re.IGNORECASE)
+_DIRECTION_PATTERN = re.compile(r"(?:^|\n)\s*(graph|flowchart)\s+(TB|TD|BT|LR|RL)", re.IGNORECASE)
 _SUBGRAPH_PATTERN = re.compile(r"subgraph\s+(\w[\w\d_]*)\s*([^\n]*)")
 _STYLE_PATTERN = re.compile(
     r"style\s+(\w[\w\d_]*)\s+"
@@ -59,8 +61,8 @@ _STYLE_PROP = re.compile(
 )
 
 _DIAGRAM_TYPE_RE = re.compile(
-    r"^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram"
-    r"|stateDiagram-v2|erDiagram|pie|gantt)\b",
+    r"^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram-v2"
+    r"|stateDiagram|erDiagram|pie|gantt)\b",
     re.IGNORECASE,
 )
 
@@ -69,12 +71,67 @@ _DIAGRAM_TYPE_RE = re.compile(
 class MermaidConverter(DiagramConverter):
     language = "mermaid"
 
+    def _normalize_inline(self, source: str) -> str:
+        lines = source.split("\n")
+        result: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith("%"):
+                result.append(line)
+                continue
+            header_m = _DIAGRAM_TYPE_RE.match(stripped)
+            if header_m:
+                rest = stripped[header_m.end():].strip()
+                if not rest:
+                    result.append(line)
+                    continue
+                depth = 0
+                segments = []
+                current = ""
+                for ch in rest:
+                    if ch == "{":
+                        depth += 1
+                        current += ch
+                    elif ch == "}":
+                        depth -= 1
+                        current += ch
+                    elif ch == ";" and depth == 0:
+                        segments.append(current.strip())
+                        current = ""
+                    else:
+                        current += ch
+                if current.strip():
+                    segments.append(current.strip())
+                if not segments:
+                    result.append(line)
+                    continue
+
+                diagram_type = header_m.group(1).lower()
+                if diagram_type in ("flowchart", "graph") and segments:
+                    dir_m = re.match(r"(TB|TD|BT|LR|RL)\s*", segments[0], re.IGNORECASE)
+                    if dir_m:
+                        header_line = header_m.group(1) + " " + dir_m.group(1).upper()
+                        result.append(header_line)
+                        for s in segments[1:]:
+                            if s:
+                                result.append(s)
+                        continue
+
+                for s in segments:
+                    if s:
+                        result.append(s)
+                continue
+            result.append(line)
+        return "\n".join(result)
+
     def parse(self, source: str) -> Diagram:
         diagram = Diagram(id="mermaid_diagram", title="Mermaid Diagram")
         diagram.layout = Layout(LayoutType.LAYERED, "TB", 40, 60)
 
         header_match = _DIAGRAM_TYPE_RE.search(source)
         diagram_type = header_match.group(1).lower() if header_match else "graph"
+
+        source = self._normalize_inline(source)
 
         parsers = {
             "sequencediagram": self._parse_sequence,
@@ -226,7 +283,6 @@ class MermaidConverter(DiagramConverter):
                         text_color=txt_color or Style().text_color,
                     )
 
-        self._ensure_positions(diagram)
         return diagram
 
     # ── sequenceDiagram ──────────────────────────────────────────────
@@ -234,7 +290,7 @@ class MermaidConverter(DiagramConverter):
     def _parse_sequence(self, source: str, diagram: Diagram) -> Diagram:
         diagram.layout.direction = "TB"
         participants: dict[str, Node] = {}
-        seq_idx = [0]
+        raw_edges: list[tuple[str, str, str, str]] = []  # src, tgt, label, arrow
 
         for line in source.split("\n"):
             line = line.strip()
@@ -269,7 +325,7 @@ class MermaidConverter(DiagramConverter):
 
             am = re.match(
                 r"([\w\d_]+)\s*"
-                r"(->>?|->?x?|-->>?|-[xX]|=>|~[~>]>?)"
+                r"(->>?|->?x?|-->>?|-[xX]|-\)|--\)|=>|~[~>]>?)"
                 r"\+?[-+]?"
                 r"(>>?)?\s*"
                 r"([\w\d_]+)\s*"
@@ -293,36 +349,89 @@ class MermaidConverter(DiagramConverter):
                         diagram.add_node(node)
                         participants[pid] = node
 
-                arrow_style = ArrowStyle.TRIANGLE_FILLED
-                if arrow.startswith("--"):
-                    edge_style = EdgeStyle.DASHED
-                elif arrow.startswith("~"):
-                    edge_style = EdgeStyle.DOTTED
-                elif arrow.startswith("="):
-                    edge_style = EdgeStyle.BOLD
-                else:
-                    edge_style = EdgeStyle.SOLID
-
-                if arrow.endswith("x"):
-                    arrow_style = ArrowStyle.BOX
-                elif arrow.endswith("o"):
-                    arrow_style = ArrowStyle.CIRCLE
-
-                edge = Edge(
-                    id=f"seq_{seq_idx[0]}",
-                    source=src,
-                    target=tgt,
-                    label=Label(text=label_text) if label_text else None,
-                    style=Style(
-                        stroke_style=edge_style,
-                        arrow_end=arrow_style,
-                    ),
-                )
-                diagram.add_edge(edge)
-                seq_idx[0] += 1
+                raw_edges.append((src, tgt, label_text, arrow))
                 continue
 
-        self._ensure_positions(diagram)
+        if not participants:
+            return diagram
+
+        # -- Position participants horizontally --
+        pad = diagram.layout.padding if diagram.layout else 20
+        gap = diagram.layout.node_spacing if diagram.layout else 60
+        pp_width = max((n.size.width if n.size else 100) for n in participants.values())
+
+        x = float(pad)
+        y = float(pad)
+        part_positions: dict[str, tuple[float, float, float, float]] = {}
+        for pid in participants:
+            node = participants[pid]
+            nw = node.size.width if node.size else 100
+            nh = node.size.height if node.size else 40
+            node.position = Position(x, y)
+            part_positions[pid] = (x, y, nw, nh)
+            x += pp_width + gap
+
+        pp_bottom = pad + max((n.size.height if n.size else 40) for n in participants.values())
+
+        # -- Create edges with waypoints at distinct Y levels --
+        msg_gap = max(gap, 30)
+        for i, (src, tgt, label_text, arrow) in enumerate(raw_edges):
+            if src not in part_positions or tgt not in part_positions:
+                continue
+            sx, sy, sw, sh = part_positions[src]
+            tx, ty, tw, th = part_positions[tgt]
+
+            y_off = pp_bottom + (i + 1) * msg_gap
+
+            x1 = sx + sw
+            if sx > tx:
+                x1 = sx
+            x2 = tx
+            if sx > tx:
+                x2 = tx + tw
+
+            waypoints = [Point(x1, y_off), Point(x2, y_off)]
+
+            edge_style = EdgeStyle.SOLID
+            arrow_style = ArrowStyle.TRIANGLE_FILLED
+            if arrow.startswith("--"):
+                edge_style = EdgeStyle.DASHED
+            elif arrow.startswith("~"):
+                edge_style = EdgeStyle.DOTTED
+            elif arrow.startswith("="):
+                edge_style = EdgeStyle.BOLD
+            if arrow.endswith("x"):
+                arrow_style = ArrowStyle.BOX
+            elif arrow.endswith("o"):
+                arrow_style = ArrowStyle.CIRCLE
+
+            edge = Edge(
+                id=f"seq_{i}",
+                source=src,
+                target=tgt,
+                label=Label(text=label_text) if label_text else None,
+                style=Style(stroke_style=edge_style, arrow_end=arrow_style),
+                waypoints=waypoints,
+            )
+            diagram.add_edge(edge)
+
+        # -- Compute viewport --
+        all_pos = [n.position for n in diagram.all_nodes() if n.position]
+        if all_pos:
+            min_x = min(p.x for p in all_pos)
+            min_y = min(p.y for p in all_pos)
+            max_x = max(
+                p.x + (n.size.width if n.size else 100)
+                for n, p in zip(diagram.all_nodes(), all_pos)
+            )
+            max_y = pp_bottom + (len(raw_edges) + 1) * msg_gap + 20
+            cw = max_x - min_x
+            ch = max_y - min_y
+            p = max(pad * 2, cw * 0.15, ch * 0.15)
+            diagram.viewport = Viewport(x=min_x - p, y=min_y - p, width=cw + p * 2, height=ch + p * 2)
+
+        # Disable layout engine — we handle positioning
+        diagram.layout.layout_type = LayoutType.NONE
         return diagram
 
     # ── classDiagram ─────────────────────────────────────────────────
@@ -330,7 +439,7 @@ class MermaidConverter(DiagramConverter):
     def _parse_class(self, source: str, diagram: Diagram) -> Diagram:
         diagram.layout.direction = "TB"
         current_class: Optional[str] = None
-        class_bodies: dict[str, list[str]] = {}
+        class_members: dict[str, list[str]] = {}
 
         for line in source.split("\n"):
             line = line.strip()
@@ -340,34 +449,44 @@ class MermaidConverter(DiagramConverter):
                 continue
 
             if "{" in line and not line.startswith("}"):
-                cm = re.match(r"(class|interface|enum)\s+(\w[\w\d_]*)\s*\{?", line, re.IGNORECASE)
+                cm = re.match(r"(class|interface|enum)\s+([\w][\w-]*)\s*\{?", line, re.IGNORECASE)
                 if cm:
                     current_class = cm.group(2)
-                    if current_class not in class_bodies:
-                        class_bodies[current_class] = []
+                    if current_class not in diagram.nodes:
                         node = Node(
                             id=current_class,
                             label=Label(text=current_class),
                             shape=Shape(shape_type=ShapeType.RECTANGLE),
-                            size=Size(width=120, height=60),
+                            size=Size(width=140, height=50),
                             style=Style(
                                 fill_color="#f8f9fa",
                                 stroke_color="#333333",
                             ),
                         )
                         diagram.add_node(node)
-                    continue
+
+                    brace_s = line.index("{")
+                    brace_e = line.find("}", brace_s)
+                    if brace_e > brace_s:
+                        inline_content = line[brace_s + 1 : brace_e].strip()
+                        if inline_content:
+                            for p in inline_content.split(";"):
+                                p = p.strip()
+                                if p:
+                                    class_members.setdefault(current_class, []).append(p)
+                        current_class = None
+                        continue
 
             if "}" in line:
                 current_class = None
                 continue
 
             if current_class and line:
-                class_bodies[current_class].append(line)
+                class_members.setdefault(current_class, []).append(line)
 
             cr = re.match(
-                r"(\w[\w\d_]*)\s*(<\|--|--\||<\.\.|\.\.>|\.\.\|>|<\|\.\.|\*--|o--|<@|--\*>|\.\.\*>)"
-                r"\s*(\w[\w\d_]*)",
+                r"([\w][\w-]*)\s*(<\|--|--\||<\.\.|\.\.>|\.\.\|>|<\|\.\.|\*--|o--|<@|--\*>|\.\.\*>)"
+                r"\s*([\w][\w-]*)",
                 line,
             )
             if cr:
@@ -381,13 +500,13 @@ class MermaidConverter(DiagramConverter):
                 if ".." in rel:
                     edge_style = EdgeStyle.DASHED
                 if rel.endswith("|>"):
-                    arrow_end = ArrowStyle.TRIANGLE_FILLED
-                elif rel.endswith(">"):
-                    arrow_end = ArrowStyle.TRIANGLE
-                elif rel.startswith("<|"):
                     arrow_start = ArrowStyle.TRIANGLE_FILLED
-                elif rel.startswith("<"):
+                elif rel.endswith(">"):
                     arrow_start = ArrowStyle.TRIANGLE
+                elif rel.startswith("<|"):
+                    arrow_end = ArrowStyle.TRIANGLE_FILLED
+                elif rel.startswith("<"):
+                    arrow_end = ArrowStyle.TRIANGLE
                 if "*--" in rel or "--*" in rel:
                     arrow_end = ArrowStyle.DIAMOND_FILLED
                 elif "o--" in rel or "--o" in rel:
@@ -416,11 +535,52 @@ class MermaidConverter(DiagramConverter):
                 diagram.add_edge(edge)
                 continue
 
-            cc = re.match(r"(\w[\w\d_]*)\s*--\s*", line)
+            cc = re.match(r"([\w][\w-]*)\s*--\s*", line)
             if cc:
                 continue
 
-        self._ensure_positions(diagram)
+            # Parse class member: ClassName : member
+            member_m = re.match(r"([\w][\w-]*)\s*:\s*(.+)", line)
+            if member_m:
+                cname = member_m.group(1)
+                member_text = member_m.group(2).strip()
+                class_members.setdefault(cname, [])
+                class_members[cname].append(member_text)
+                continue
+
+        # Enrich class nodes with members
+        for cname, members in class_members.items():
+            node = diagram.get_node(cname)
+            if node is not None:
+                all_lines = [node.label.text if node.label else cname] + members
+                node.label = Label(text="\n".join(all_lines))
+                nlines = len(all_lines)
+                node.size = Size(
+                    width=max(node.size.width if node.size else 140, 140),
+                    height=30 + nlines * 18,
+                )
+
+        # Position classes in a grid
+        nodes = diagram.all_nodes()
+        if nodes:
+            pad = diagram.layout.padding if diagram.layout else 20
+            gap = diagram.layout.node_spacing if diagram.layout else 40
+            cols = max(1, int(math.ceil(math.sqrt(len(nodes)))))
+            x, y = float(pad), float(pad)
+            max_row_h = 0.0
+            for i, node in enumerate(nodes):
+                nw = node.size.width if node.size else 120
+                nh = node.size.height if node.size else 60
+                node.position = Position(x, y)
+                max_row_h = max(max_row_h, nh)
+                if (i + 1) % cols == 0:
+                    x = float(pad)
+                    y += max_row_h + gap
+                    max_row_h = 0.0
+                else:
+                    x += nw + gap
+
+        diagram.layout.layout_type = LayoutType.NONE
         return diagram
 
     # ── stateDiagram / stateDiagram-v2 ───────────────────────────────
@@ -437,7 +597,7 @@ class MermaidConverter(DiagramConverter):
                 continue
 
             sm = re.match(
-                r"\s*(\[\[\*\]\]|[\w\d_]+)\s*-->\s*(\[\[\*\]\]|[\w\d_]+)(?:\s*:\s*(.*))?",
+                r"\s*(\[\*\]|[\w\d_]+)\s*-->\s*(\[\*\]|[\w\d_]+)(?:\s*:\s*(.*))?",
                 line,
             )
             if sm:
@@ -493,7 +653,8 @@ class MermaidConverter(DiagramConverter):
                 state_count[0] += 1
                 continue
 
-        self._ensure_positions(diagram)
+        # LayeredLayout handles state diagrams well (nodes flow by transition order)
+        diagram.layout.direction = "TB"
         return diagram
 
     # ── erDiagram ────────────────────────────────────────────────────
@@ -511,7 +672,7 @@ class MermaidConverter(DiagramConverter):
                 continue
 
             em = re.match(
-                r"(\w[\w\d_]*)\s+(?:\"{2}|)[\w\s]*(?:\"{2}|)\s*\{",
+                r"([\w][\w-]*)\s+(?:\"{2}|)[\w\s]*(?:\"{2}|)\s*\{",
                 line,
             )
             if em:
@@ -519,7 +680,7 @@ class MermaidConverter(DiagramConverter):
                 entities[current_entity] = []
                 continue
 
-            if "}" in line:
+            if line.strip() == "}":
                 current_entity = None
                 continue
 
@@ -527,18 +688,18 @@ class MermaidConverter(DiagramConverter):
                 entities[current_entity].append(line)
 
             em2 = re.match(
-                r"(\w[\w\d_]*)\s*"
+                r"([\w][\w-]*)\s*"
                 r"(\|o\|\||\|\|o\||\|o\|\||\|\|o\||\|o\|\||\|\|--o\{|"
                 r"\|\|--\|\||o\{--\|\||\|\|--o\{|o\{o\{|\|\|--\|\|)"
-                r"\s*(?:\"{2}([^\"]{2,})\"{2}|([\w\s]+))?\s*"
+                r"\s*(?:\"{2}([^\"]{2,})\"{2}|([\w-]+))?\s*"
                 r":\s*(.+)",
                 line,
             )
             if not em2:
                 em2 = re.match(
-                    r"(\w[\w\d_]*)\s*"
+                    r"([\w][\w-]*)\s*"
                     r"([|o\-.<>{}]+)"
-                    r"\s*(?:\"{2}([^\"]{2,})\"{2}|([\w\s]+))?\s*"
+                    r"\s*(?:\"{2}([^\"]{2,})\"{2}|([\w-]+))?\s*"
                     r":\s*(.+)",
                     line,
                 )
@@ -570,7 +731,18 @@ class MermaidConverter(DiagramConverter):
                     diagram.add_edge(edge)
                 continue
 
-        self._ensure_positions(diagram)
+        # Position entities horizontally
+        nodes = diagram.all_nodes()
+        if nodes:
+            pad = diagram.layout.padding if diagram.layout else 20
+            gap = diagram.layout.node_spacing if diagram.layout else 50
+            x, y = float(pad), float(pad)
+            for node in nodes:
+                nw = node.size.width if node.size else 100
+                node.position = Position(x, y)
+                x += nw + gap
+
+        diagram.layout.layout_type = LayoutType.NONE
         return diagram
 
     # ── pie chart ────────────────────────────────────────────────────
@@ -649,7 +821,7 @@ class MermaidConverter(DiagramConverter):
             diagram.add_node(slice_node)
             start_angle += angle
 
-        self._ensure_positions(diagram)
+        diagram.layout.layout_type = LayoutType.NONE
         return diagram
 
     # ── gantt chart ──────────────────────────────────────────────────
@@ -658,6 +830,8 @@ class MermaidConverter(DiagramConverter):
         diagram.layout.direction = "TB"
         section_name = ""
         task_idx = [0]
+        source_id_map: dict[str, str] = {}
+        deps: list[tuple[str, str]] = []
 
         for line in source.split("\n"):
             line = line.strip()
@@ -673,26 +847,42 @@ class MermaidConverter(DiagramConverter):
                 section_name = sm.group(1).strip()
                 continue
 
-            tm = re.match(
-                r"\s*([\w\s]+)\s*:\s*(crit|active|done)?,?\s*"
-                r"(after\s+\w+\s*,?\s*)?"
-                r"([\w\d]+)\s*,\s*([\w\d]+)",
-                line,
-            )
+            # Parse: task_name : [status,] [id,] [after X,] date, duration
+            tm = re.match(r"([^:]+?)\s*:\s*(.+)", line)
             if tm:
                 task_name = tm.group(1).strip()
-                status = tm.group(2) or "active"
+                rest = tm.group(2).strip()
 
-                tid = f"task_{task_idx[0]}"
-                label = f"{task_name}"
-                if section_name:
-                    label = f"[{section_name}] {label}"
+                status = ""
+                src_id = ""
+                after_task = ""
+
+                # Extract optional status (crit/active/done)
+                status_m = re.match(r"(crit|active|done),?\s*(.*)", rest, re.IGNORECASE)
+                if status_m:
+                    status = status_m.group(1).lower()
+                    rest = status_m.group(2).strip()
+
+                # Split into comma-separated parts
+                parts = [p.strip() for p in re.split(r",\s*", rest)]
+
+                # Extract source ID (the first word that's not a duration)
+                for p in parts:
+                    if re.match(r"^after\s+(\w+)$", p, re.IGNORECASE):
+                        after_task = re.match(r"^after\s+(\w+)$", p, re.IGNORECASE).group(1)
+                    elif re.match(r"^\w+$", p) and not re.match(r"^\d+[dwm]$", p) and not src_id:
+                        src_id = p
 
                 fill = "#4caf50"
                 if status == "crit":
                     fill = "#f44336"
                 elif status == "done":
                     fill = "#9e9e9e"
+
+                tid = f"task_{task_idx[0]}"
+                label = f"{task_name}"
+                if section_name:
+                    label = f"[{section_name}] {label}"
 
                 node = Node(
                     id=tid,
@@ -706,33 +896,37 @@ class MermaidConverter(DiagramConverter):
                     ),
                 )
                 diagram.add_node(node)
+                if src_id:
+                    source_id_map[src_id] = tid
+                if after_task:
+                    deps.append((after_task, tid))
                 task_idx[0] += 1
                 continue
 
-            tm2 = re.match(r"\s*([\w\s]+)\s*:\s*([\w\d]+)\s*,\s*([\w\d]+)", line)
-            if tm2:
-                task_name = tm2.group(1).strip()
-                tid = f"task_{task_idx[0]}"
-                label = f"{task_name}"
-                if section_name:
-                    label = f"[{section_name}] {label}"
-
-                node = Node(
-                    id=tid,
-                    label=Label(text=label),
-                    shape=Shape(shape_type=ShapeType.RECTANGLE),
-                    size=Size(width=120, height=30),
-                    style=Style(
-                        fill_color="#4caf50",
-                        text_color="#fff",
-                        font_size=11,
-                    ),
+        # Create dependency edges
+        for after_id, tid in deps:
+            if after_id in source_id_map:
+                src_tid = source_id_map[after_id]
+                edge = Edge(
+                    id=f"{src_tid}-{tid}",
+                    source=src_tid,
+                    target=tid,
+                    style=Style(stroke_style=EdgeStyle.DASHED, arrow_end=ArrowStyle.NONE),
                 )
-                diagram.add_node(node)
-                task_idx[0] += 1
-                continue
+                diagram.add_edge(edge)
 
-        self._ensure_positions(diagram)
+        # Position tasks in a vertical stack
+        nodes = diagram.all_nodes()
+        if nodes:
+            pad = diagram.layout.padding if diagram.layout else 20
+            gap = diagram.layout.layer_spacing if diagram.layout else 20
+            x, y = float(pad), float(pad)
+            for node in nodes:
+                nh = node.size.height if node.size else 30
+                node.position = Position(x, y)
+                y += nh + gap
+
+        diagram.layout.layout_type = LayoutType.NONE
         return diagram
 
     # ── shared helpers ──────────────────────────────────────────────
@@ -746,8 +940,6 @@ class MermaidConverter(DiagramConverter):
             edge_style = EdgeStyle.BOLD
         elif "-." in arrow_str:
             edge_style = EdgeStyle.DOTTED
-        elif "--" in arrow_str:
-            edge_style = EdgeStyle.DASHED
 
         if arrow_str.startswith("<->") or arrow_str.startswith("<==>"):
             arrow_start = ArrowStyle.TRIANGLE_FILLED
