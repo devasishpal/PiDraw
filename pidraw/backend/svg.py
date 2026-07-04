@@ -148,6 +148,7 @@ class SvgBackend:
 
         # Clip path to prevent text overflow
         clip_id = f"clip-{node.id}"
+        assert self._defs is not None
         clip_def = SubElement(self._defs, "clipPath", {"id": clip_id})
         SubElement(
             clip_def,
